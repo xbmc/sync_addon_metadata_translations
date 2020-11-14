@@ -304,8 +304,14 @@ def po_to_xml(addon_xml, po_index):
     payload = payload[:insert_index] + summary_lines + \
               description_lines + disclaimer_lines + payload[insert_index:]
 
-    with open(r'_addon.xml', 'w') as file_handle:
-        file_handle.writelines(payload)
+    if payload != addon_xml['content_lines']:
+        with open('addon.xml', 'w') as file_handle:
+            file_handle.writelines(payload)
+
+        print('addon.xml has been modified... completed')
+        return
+
+    print('No changes made to addon.xml... completed')
 
 
 if __name__ == '__main__':
