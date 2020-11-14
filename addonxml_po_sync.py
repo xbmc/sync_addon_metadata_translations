@@ -37,6 +37,10 @@ XMLTPL_DESCRIPTION = '{whitespace}<description lang="{language_code}">{body}</de
 XMLTPL_DISCLAIMER = '{whitespace}<disclaimer lang="{language_code}">{body}</disclaimer>\n'
 XMLTPL_SUMMARY = '{whitespace}<summary lang="{language_code}">{body}</summary>\n'
 
+POTPL_MSGCTXT = 'msgctxt "{string}"\n'
+POTPL_MSGID = 'msgid "{string}"\n'
+POTPL_MSGSTR = 'msgstr "{string}"\n'
+
 
 def get_po_metadata(po_index, ctxt):
     payload = []
@@ -229,11 +233,61 @@ def get_xml_insert_index(addon_xml):
     return insert_line
 
 
-def _merge_items(group_one, group_two):
+def merge_items(group_one, group_two):
     payload = group_one.copy()
     for group_item in group_two:
         if not any(item for item in payload if item[0] == group_item[0]):
             payload.append(group_item)
+
+    return payload
+
+
+def merge_po_lines(summary_lines, description_lines, disclaimer_lines):
+    count = max(map(len, [summary_lines, description_lines, disclaimer_lines]))
+
+    payload = {}
+
+    for index in range(count):
+        try:
+            payload[summary_lines[index][0]] = \
+                payload.get(summary_lines[index][0], []) + summary_lines[index][1]
+        except IndexError:
+            pass
+
+        try:
+            payload[description_lines[index][0]] = \
+                payload.get(description_lines[index][0], []) + description_lines[index][1]
+        except IndexError:
+            pass
+
+        try:
+            payload[disclaimer_lines[index][0]] = \
+                payload.get(disclaimer_lines[index][0], []) + disclaimer_lines[index][1]
+        except IndexError:
+            pass
+
+    return payload
+
+
+def get_po_lines(items, ctxt):
+    payload = []
+
+    en_gb = next((item for item in items if item[0] == 'en_GB'), None)
+
+    if en_gb:
+        for item in items:
+            payload.append((
+                item[0],
+                [
+                    POTPL_MSGCTXT.format(string=ctxt),
+                    POTPL_MSGID.format(string=en_gb[1]),
+                    POTPL_MSGSTR.format(string='' if item[0] == 'en_GB' else item[1]),
+                    '\n'
+                ]
+            ))
+
+    else:
+        print('Unable to generate lines for {ctxt}... missing en_GB'.format(ctxt=ctxt))
 
     return payload
 
@@ -253,9 +307,15 @@ def xml_to_po(addon_xml, po_index):
     po_disclaimers = get_po_metadata(po_index, CTXT_DISCLAIMER)
     po_summaries = get_po_metadata(po_index, CTXT_SUMMARY)
 
-    descriptions = _merge_items(xml_descriptions, po_descriptions)
-    disclaimers = _merge_items(xml_disclaimers, po_disclaimers)
-    summaries = _merge_items(xml_summaries, po_summaries)
+    descriptions = merge_items(xml_descriptions, po_descriptions)
+    disclaimers = merge_items(xml_disclaimers, po_disclaimers)
+    summaries = merge_items(xml_summaries, po_summaries)
+
+    description_lines = get_po_lines(descriptions, CTXT_DESCRIPTION)
+    disclaimer_lines = get_po_lines(disclaimers, CTXT_DISCLAIMER)
+    summary_lines = get_po_lines(summaries, CTXT_SUMMARY)
+
+    po_lines = merge_po_lines(summary_lines, description_lines, disclaimer_lines)
 
 
 def po_to_xml(addon_xml, po_index):
@@ -277,9 +337,9 @@ def po_to_xml(addon_xml, po_index):
     po_disclaimers = get_po_metadata(po_index, CTXT_DISCLAIMER)
     po_summaries = get_po_metadata(po_index, CTXT_SUMMARY)
 
-    descriptions = _merge_items(po_descriptions, xml_descriptions)
-    disclaimers = _merge_items(po_disclaimers, xml_disclaimers)
-    summaries = _merge_items(po_summaries, xml_summaries)
+    descriptions = merge_items(po_descriptions, xml_descriptions)
+    disclaimers = merge_items(po_disclaimers, xml_disclaimers)
+    summaries = merge_items(po_summaries, xml_summaries)
 
     descriptions.sort(key=lambda item: item[0])
     disclaimers.sort(key=lambda item: item[0])
