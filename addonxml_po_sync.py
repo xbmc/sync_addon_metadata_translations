@@ -524,4 +524,6 @@ if __name__ == '__main__':
         xml_to_po(_addon_xml, _po_index)
         sys.exit(0)
 
-    sys.exit(1)
+    po_to_xml(_addon_xml, _po_index)
+    xml_to_po(_addon_xml, _po_index)
+    sys.exit(0)
