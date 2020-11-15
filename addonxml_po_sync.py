@@ -349,8 +349,45 @@ def remove_po_lines(po_index):
     return payload
 
 
+def get_po_insert_index(po_file):
+    msgstr = False
+    first_quote = False
+
+    insert_index = -1
+
+    for index, line in enumerate(po_file):
+        if not msgstr and line.startswith('msgstr ""'):
+            msgstr = True
+            continue
+
+        if msgstr:
+            if not first_quote and line.startswith('"'):
+                first_quote = True
+                continue
+
+            if first_quote and not line.startswith('"'):
+                insert_index = index + 1
+                break
+
+    return insert_index
+
+
 def insert_po_lines(po_index, po_lines):
-    pass
+    payload = copy.deepcopy(po_index)
+    languages = list(po_lines.keys())
+
+    for index, po_item in enumerate(po_index):
+        if po_item.get('language_code') in languages:
+            insert_index = get_po_insert_index(po_item['content_lines'])
+            if insert_index <= 0:
+                print('Skipped inserting lines into {language_code} po file...'
+                      .format(language_code=po_item.get('language_code')))
+
+            payload[index]['content_lines'] = po_item['content_lines'][:insert_index] + \
+                                              po_lines.get(po_item.get('language_code')) + \
+                                              po_item['content_lines'][insert_index:]
+
+    return payload
 
 
 def write_po_files(po_index, output_index):
@@ -394,7 +431,7 @@ def xml_to_po(addon_xml, po_index):
 
     payload_index = remove_po_lines(po_index)
 
-    insert_po_lines(po_index, po_lines)
+    payload_index = insert_po_lines(payload_index, po_lines)
 
     write_po_files(po_index, payload_index)
 
