@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import copy
 import os
 import re
 import sys
@@ -177,6 +178,9 @@ def language_code_from_path(language_path):
 def generate_po_index():
     file_index = []
     for path, _, filenames in list(os.walk('.')):
+        if 'resource.language.' not in path:
+            continue
+
         files = [filename for filename in filenames if filename.endswith('.po')]
         for filename in files:
             filename_and_path = os.path.join(path, filename)
@@ -292,6 +296,77 @@ def get_po_lines(items, ctxt):
     return payload
 
 
+def remove_po_lines(po_index):
+    payload = copy.deepcopy(po_index)
+
+    ctxt_targets = (
+        'msgctxt "{ctxt}"'.format(ctxt=CTXT_SUMMARY),
+        'msgctxt "{ctxt}"'.format(ctxt=CTXT_DESCRIPTION),
+        'msgctxt "{ctxt}"'.format(ctxt=CTXT_DESCRIPTION)
+    )
+
+    for index, po_item in enumerate(po_index):
+        msgctxt = False
+        msgid = False
+        msgstr = False
+
+        payload[index]['content_lines'] = []
+        for line in po_item['content_lines']:
+            if not msgctxt and line.startswith(ctxt_targets):
+                msgctxt = True
+                continue
+
+            if msgctxt:
+                if not msgid:
+                    if line.startswith('msgid '):
+                        msgid = True
+                    continue
+
+            if msgid:
+                if not msgstr:
+                    if line.startswith('msgstr '):
+                        msgstr = True
+                    continue
+
+            if msgctxt and msgid and msgstr:
+
+                if not line.strip():
+                    msgctxt = False
+                    msgid = False
+                    msgstr = False
+                    continue
+
+                elif line.startswith('"'):
+                    continue
+
+                else:
+                    msgctxt = False
+                    msgid = False
+                    msgstr = False
+
+            payload[index]['content_lines'] = payload[index].get('content_lines', []) + [line]
+
+    return payload
+
+
+def insert_po_lines(po_index, po_lines):
+    pass
+
+
+def write_po_files(po_index, output_index):
+    print('Writing po files... starting')
+
+    for index, po_item in enumerate(output_index):
+        if po_item.get('content_lines') != po_index[index].get('content_lines'):
+            print('{language_code} po file changed... writing'
+                  .format(language_code=po_item.get('language_code')))
+
+            with open(po_item.get('filename'), 'w') as file_handle:
+                file_handle.writelines(po_item.get('content_lines'))
+
+    print('Writing po files... completed')
+
+
 def xml_to_po(addon_xml, po_index):
     print('Syncing addon.xml to po files...')
 
@@ -316,6 +391,12 @@ def xml_to_po(addon_xml, po_index):
     summary_lines = get_po_lines(summaries, CTXT_SUMMARY)
 
     po_lines = merge_po_lines(summary_lines, description_lines, disclaimer_lines)
+
+    payload_index = remove_po_lines(po_index)
+
+    insert_po_lines(po_index, po_lines)
+
+    write_po_files(po_index, payload_index)
 
 
 def po_to_xml(addon_xml, po_index):
