@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import argparse
@@ -168,9 +169,10 @@ def language_code_from_path(language_path):
     )
     if match:
         language_code = match.group('language_code')
-        language_code = '_'.join([language_code.split('_')[0],
-                                  language_code.split('_')[1][:2].upper() +
-                                  language_code.split('_')[1][2:]])
+        if '_' in language_code:
+            language_code = '_'.join([language_code.split('_')[0],
+                                      language_code.split('_')[1][:2].upper() +
+                                      language_code.split('_')[1][2:]])
 
     return language_code
 
