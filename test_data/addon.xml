@@ -1,62 +1,45 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.composite_for_plex" name="Composite" version="1.4.1" provider-name="anxdpanic">
-    <requires>
-        <import addon="xbmc.python" version="2.24.0"/>
-        <import addon="script.module.kodi-six" version="0.0.2"/>
-        <import addon="script.module.six" version="1.11.0"/>
-        <import addon="script.module.requests" version="2.12.4"/>
-        <import addon="script.module.pyxbmct" version="1.2.0"/>
-    </requires>
-    <extension point="xbmc.python.pluginsource" library="resources/lib/entry_point.py">
-        <provides>video audio image</provides>
-        <medialibraryscanpath content="movies">library/movies/</medialibraryscanpath>
-        <medialibraryscanpath content="tvshows">library/tvshows/</medialibraryscanpath>
-    </extension>
-    <extension point="xbmc.service" library="resources/lib/service_entry_point.py" start="login"/>
-    <extension point="xbmc.python.script" library="resources/lib/entry_point.py"/>
-    <extension point="kodi.context.item">
-        <menu id="kodi.core.main">
-            <menu>
-                <label>Composite</label>
-                <item library="resources/lib/composite_addon/context_menu_transcoded.py">
-                    <!-- Play Transcoded -->
-                    <label>30086</label>
-                    <visible>[Window.IsActive(10000) | Window.IsActive(10025)] + String.IsEmpty(Container.PluginName) + String.StartsWith(ListItem.FileNameAndPath,plugin://plugin.video.composite_for_plex/) + [String.IsEqual(ListItem.DBTYPE,video) | String.IsEqual(ListItem.DBTYPE,movie) | String.IsEqual(ListItem.DBTYPE,episode)]</visible>
-                </item>
-                <item library="resources/lib/composite_addon/context_menu_watched.py">
-                    <!-- Mark as watched -->
-                    <label>30792</label>
-                    <visible>[Window.IsActive(10000) | Window.IsActive(10025)] + String.IsEmpty(Container.PluginName) + String.StartsWith(ListItem.FileNameAndPath,plugin://plugin.video.composite_for_plex/) + [String.IsEqual(ListItem.DBTYPE,video) | String.IsEqual(ListItem.DBTYPE,movie) | String.IsEqual(ListItem.DBTYPE,episode)]</visible>
-                </item>
-                <item library="resources/lib/composite_addon/context_menu_unwatched.py">
-                    <!-- Mark as unwatched -->
-                    <label>30793</label>
-                    <visible>[Window.IsActive(10000) | Window.IsActive(10025)] + String.IsEmpty(Container.PluginName) + String.StartsWith(ListItem.FileNameAndPath,plugin://plugin.video.composite_for_plex/) + [String.IsEqual(ListItem.DBTYPE,video) | String.IsEqual(ListItem.DBTYPE,movie) | String.IsEqual(ListItem.DBTYPE,episode)]</visible>
-                </item>
-            </menu>
-        </menu>
-    </extension>
-    <extension point="xbmc.addon.metadata">
-        <news>
-[fix] xbmc.translatePath -&gt; xbmcvfs.translatePath |Kodi 19|
-[upd] improve resuming playback
-[upd] improve accuracy of library context menus |Kodi 19|
-[chg] group playlist sections on main menu
-[chg] always used cached servers during playback
-        </news>
-        <assets>
-            <icon>icon.png</icon>
-            <fanart>fanart.jpg</fanart>
-        </assets>
-        <platform>all</platform>
-        <license>GPL-2.0-or-later</license>
-        <source>https://github.com/anxdpanic/plugin.video.composite_for_plex</source>
-        <forum>https://composite.panicked.xyz/forum</forum>
-        <summary lang="en_GB">Testing 123</summary>
-        <description lang="en_GB">Browse and play video, music and photo media files managed by Plex Media Server.[CR][CR]Fork of PleXBMC by Hippojay</description>
-        <disclaimer lang="en_GB">Composite is NOT an official Plex add-on and is not supported or endorsed by Plex.</disclaimer>
-        <description lang="de_DE">Durchsuchen und Abspielen von Videos, Musik und Fotos, die vom Plex Media Server verwaltet werden.[CR][CR]Fork von Hippojay's PleXBMC</description>
-        <disclaimer lang="de_DE">Composite ist KEIN offizielles Plex Add-on und wird von Plex weder unterstützt noch gebilligt.</disclaimer>
-        <reuselanguageinvoker>false</reuselanguageinvoker>
-    </extension>
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="skin.rapier" version="12.2.24" name="Rapier" provider-name="Scarfa, Gade">
+  <requires>
+    <import addon="xbmc.gui" version="5.15.0"/>
+    <import addon="script.favourites" version="4.0.9"/>
+	<!--<import addon="script.tv.show.next.aired" version="6.0.10"/>-->
+	<!--<import addon="script.skin.helper.service" version="1.1.3"/>-->
+	<import addon="script.embuary.helper" version="2.0.2"/>
+	<import addon="resource.images.studios.white" version="0.0.2"/>
+  </requires>
+  <extension point="xbmc.gui.skin" effectslowdown="0.75" debugging="false">
+    <res width="1280" height="720" aspect="16:9" default="true" folder="720p" />
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">Rapier skin by Scarfa, Gade.</summary>
+    <summary lang="ko_KR">Rapier 스킨 제작: Scarfa, Gade.</summary>   
+    <summary lang="szl">Rapier skin โดย Scarfa, Gade.</summary>
+    <description lang="en_GB">The goal is to provide a simple to use but clean and elegant interface that focuses on efficiency when browsing your media. Important considerations are put on usability, performance, and providing the user with flexibility when it comes to customization. Rapier tries to support all the latest features Kodi has to offer as long as it fits in with the skin's design goals.</description>
+    <description lang="sr_RS@latin">Tavoitteena on tarjota helppokäyttöinen ja siisti käyttöliittymä, joka keskittyy tehokkaaseen median selaamiseen. Erityistä huolta on nähty käytettävyyden, suorituskyvyn ja muokattavuuden varmistamiseksi. Rapier pyrkii tukemaan kaikkia Kodin viimeisimpiä ominaisuuksia kunhan ne sopivat ulkoasun tyyliin.</description>
+    <description lang="szl">สกินนี้มาพร้อมกับแนวคิดที่ต้องการให้ผู้ใช้สามารถใช้งานง่ายอีกทั้งดูดีและสะอาดตาโดยมุ่งเน้นที่ให้เลือกดูมีเดียต่างๆได้อย่างมีประสิทธิภาพ โดยจุดสำคัญที่โฟกัสคือสามารถใช้งานได้ครบถ้วนหลากหลาย, สมรรถนะการทำงานที่รวดเร็วและให้ความยืดหยุ่นเมื่อต้องมีความการกำหนดค่าด้วยตนเอง อีกทั้ง Rapier จะพยายามให้การสนับสนุนทุกๆ Feature ใหม่ที่ Kodi มีให้ให้สามารถใช้งานได้ตราบเท่าที่มันยังคงไม่ขัดต่อแนวคิดของสกินนี้</description>
+    <description lang="ko_KR">효율적으로 미디어를 탐색할 수 있으면서도 멋있고 우아한 인터페이스를 제공하는 것이 스킨의 목적입니다. 사용성, 성능, 사용자 설정의 유연성을 고려하여 제작되었습니다. Rapier는 스킨의 디자인 목적에 부합하는 Kodi의 모든 최신 기능을 지원하려 합니다.</description>
+    <platform>all</platform>
+    <license>Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported</license>
+    <forum>https://forum.kodi.tv/forumdisplay.php?fid=120</forum>
+    <website>https://kodi.wiki/view/Add-on:Rapier</website>
+    <source>https://github.com/gade01/Rapier</source>
+    <assets>
+      <icon>resources/icon.png</icon>
+      <fanart>resources/fanart.jpg</fanart>
+      <banner>resources/banner.jpg</banner>
+      <clearlogo>resources/clearlogo.png</clearlogo>
+      <screenshot>resources/screenshot-01.jpg</screenshot>
+      <screenshot>resources/screenshot-02.jpg</screenshot>
+      <screenshot>resources/screenshot-03.jpg</screenshot>
+      <screenshot>resources/screenshot-04.jpg</screenshot>
+      <screenshot>resources/screenshot-05.jpg</screenshot>
+      <screenshot>resources/screenshot-06.jpg</screenshot>
+      <screenshot>resources/screenshot-07.jpg</screenshot>
+      <screenshot>resources/screenshot-08.jpg</screenshot>
+      <screenshot>resources/screenshot-09.jpg</screenshot>
+      <screenshot>resources/screenshot-10.jpg</screenshot>
+    </assets>
+    <news>[B]12.2.24[/B][CR]- Add skin settings to create custom widgets from favourites[CR]- Add record size label to PVR recordings window and information window[CR][I]For a full list of changes visit https://raw.githubusercontent.com/gade01/Rapier/master/changelog.txt[/I]</news>
+  </extension>
 </addon>
