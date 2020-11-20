@@ -376,7 +376,7 @@ def get_po_insert_index(po_file):
 
 def format_po_lines(po_lines):
     format_lines = []
-    po_lines = [line for line in po_lines if line not in ('', '\n')]  # remove empty lines
+    po_lines = [line for line in po_lines if line.strip()]  # remove empty lines
     po_lines = list(zip(*(iter(po_lines),) * 3))  # group in threes (msgctxt, msgid, msgstr)
 
     for lines in po_lines:  # add sorting weights
