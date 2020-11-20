@@ -149,7 +149,7 @@ def get_addon_xml():
     filename_and_path = os.path.join('.', 'addon.xml')
 
     if os.path.isfile(filename_and_path):
-        with open(filename_and_path) as file_handle:
+        with open(filename_and_path, encoding='utf-8') as file_handle:
             addon_xml = {
                 'filename': filename_and_path,
                 'content_lines': file_handle.readlines(),
@@ -187,7 +187,7 @@ def generate_po_index():
         for filename in files:
             filename_and_path = os.path.join(path, filename)
 
-            with open(filename_and_path) as file_handle:
+            with open(filename_and_path, encoding='utf-8') as file_handle:
                 content_lines = file_handle.readlines()
                 file_handle.seek(0)
                 content = file_handle.read()
@@ -431,7 +431,7 @@ def write_po_files(po_index, output_index):
             print('{language_code} po file changed... writing'
                   .format(language_code=po_item.get('language_code')))
 
-            with open(po_item.get('filename'), 'w') as file_handle:
+            with open(po_item.get('filename'), 'w', encoding='utf-8') as file_handle:
                 file_handle.writelines(po_item.get('content_lines'))
 
     print('Writing po files... completed')
@@ -516,7 +516,7 @@ def po_to_xml(addon_xml, po_index):
               description_lines + disclaimer_lines + payload[insert_index:]
 
     if payload != addon_xml['content_lines']:
-        with open('addon.xml', 'w') as file_handle:
+        with open('addon.xml', 'w', encoding='utf-8') as file_handle:
             file_handle.writelines(payload)
 
         print('addon.xml has been modified... completed')
