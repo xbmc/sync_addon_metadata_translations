@@ -304,7 +304,7 @@ def remove_po_lines(po_index):
     ctxt_targets = (
         'msgctxt "{ctxt}"'.format(ctxt=CTXT_SUMMARY),
         'msgctxt "{ctxt}"'.format(ctxt=CTXT_DESCRIPTION),
-        'msgctxt "{ctxt}"'.format(ctxt=CTXT_DESCRIPTION)
+        'msgctxt "{ctxt}"'.format(ctxt=CTXT_DISCLAIMER)
     )
 
     for index, po_item in enumerate(po_index):
