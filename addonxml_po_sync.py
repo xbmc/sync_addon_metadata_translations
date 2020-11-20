@@ -374,6 +374,34 @@ def get_po_insert_index(po_file):
     return insert_index
 
 
+def format_po_lines(po_lines):
+    format_lines = []
+    po_lines = [line for line in po_lines if line not in ('', '\n')]  # remove empty lines
+    po_lines = list(zip(*(iter(po_lines),) * 3))  # group in threes (msgctxt, msgid, msgstr)
+
+    for lines in po_lines:  # add sorting weights
+        if lines[0].startswith('msgctxt "{ctxt}"'.format(ctxt=CTXT_SUMMARY)):
+            format_lines.append((lines, 0))
+            continue
+
+        if lines[0].startswith('msgctxt "{ctxt}"'.format(ctxt=CTXT_DESCRIPTION)):
+            format_lines.append((lines, 1))
+            continue
+
+        if lines[0].startswith('msgctxt "{ctxt}"'.format(ctxt=CTXT_DISCLAIMER)):
+            format_lines.append((lines, 2))
+            continue
+
+    format_lines.sort(key=lambda x: x[1])
+    format_lines = [lines[0] for lines in format_lines]  # remove weights
+
+    payload = []
+    for lines in format_lines:
+        payload.extend(list(lines) + ['\n'])
+
+    return payload
+
+
 def insert_po_lines(po_index, po_lines):
     payload = copy.deepcopy(po_index)
     languages = list(po_lines.keys())
@@ -385,8 +413,11 @@ def insert_po_lines(po_index, po_lines):
                 print('Skipped inserting lines into {language_code} po file...'
                       .format(language_code=po_item.get('language_code')))
 
+            insert_lines = po_lines.get(po_item.get('language_code'))
+            insert_lines = format_po_lines(insert_lines)
+
             payload[index]['content_lines'] = po_item['content_lines'][:insert_index] + \
-                                              po_lines.get(po_item.get('language_code')) + \
+                                              insert_lines + \
                                               po_item['content_lines'][insert_index:]
 
     return payload
