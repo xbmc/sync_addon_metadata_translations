@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+    Copyright (C) 2020 anxdpanic
+
+    This file is part of sync_addon_metadata_translations
+
+    SPDX-License-Identifier: GPL-3.0-only
+    See LICENSES/GPL-3.0-only.txt for more information.
+"""
 
 import argparse
 import copy
@@ -525,7 +533,7 @@ def po_to_xml(addon_xml, po_index):
     print('No changes made to addon.xml... completed')
 
 
-if __name__ == '__main__':
+def main():
     _addon_xml = get_addon_xml()
     if not _addon_xml:
         print('No addon.xml file found... aborting')
@@ -560,3 +568,7 @@ if __name__ == '__main__':
     po_to_xml(_addon_xml, _po_index)
     xml_to_po(_addon_xml, _po_index)
     sys.exit(0)
+
+
+if __name__ == '__main__':
+    main()
