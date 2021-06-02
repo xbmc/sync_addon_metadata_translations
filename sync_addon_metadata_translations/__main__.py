@@ -52,6 +52,13 @@ POTPL_MSGID = 'msgid "{string}"\n'
 POTPL_MSGSTR = 'msgstr "{string}"\n'
 
 
+def directory_type(string):
+    if os.path.isdir(string):
+        return string
+
+    raise NotADirectoryError(string)
+
+
 def get_po_metadata(po_index, ctxt):
     payload = []
 
@@ -153,9 +160,9 @@ def xml_remove_tags(addon_xml):
     return addon_xml
 
 
-def get_addon_xml():
+def get_addon_xml(working_directory):
     addon_xml = {}
-    filename_and_path = os.path.join('.', 'addon.xml')
+    filename_and_path = os.path.join(working_directory, 'addon.xml')
 
     if os.path.isfile(filename_and_path):
         with open(filename_and_path, encoding='utf-8') as file_handle:
@@ -186,9 +193,9 @@ def language_code_from_path(language_path):
     return language_code
 
 
-def generate_po_index():
+def generate_po_index(working_directory):
     file_index = []
-    for path, _, filenames in list(os.walk('.')):
+    for path, _, filenames in list(os.walk(working_directory)):
         if 'resource.language.' not in path:
             continue
 
@@ -540,12 +547,22 @@ def po_to_xml(addon_xml, po_index):
 
 
 def main():
-    _addon_xml = get_addon_xml()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-ptx', '--po-to-xml', action='store_true',
+                        help='Sync po file values to the addon.xml file')
+    parser.add_argument('-xtp', '--xml-to-po', action='store_true',
+                        help='Sync addon.xml values to all po files')
+    parser.add_argument('-path', '--path', type=directory_type, action='store_true',
+                        nargs='?', const='.', help='Specify the working directory')
+
+    args = parser.parse_args()
+
+    _addon_xml = get_addon_xml(args.path)
     if not _addon_xml:
         print('No addon.xml file found... aborting')
         sys.exit(1)
 
-    _po_index = generate_po_index()
+    _po_index = generate_po_index(args.path)
     if not _po_index:
         print('No po files found... aborting')
         sys.exit(1)
@@ -554,14 +571,6 @@ def main():
     if not _default_po:
         print('No en_gb po file found... aborting')
         sys.exit(1)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-ptx', '--po-to-xml', action='store_true',
-                        help='Sync po file values to the addon.xml file')
-    parser.add_argument('-xtp', '--xml-to-po', action='store_true',
-                        help='Sync addon.xml values to all po files')
-
-    args = parser.parse_args()
 
     if args.po_to_xml:
         po_to_xml(_addon_xml, _po_index)
