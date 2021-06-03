@@ -554,34 +554,45 @@ def main():
                         help='Sync addon.xml values to all po files')
     parser.add_argument('-path', '--path', type=directory_type, action='store_true',
                         nargs='?', const='.', help='Specify the working directory')
+    parser.add_argument('-multi', '--multiple-addons', action='store_true',
+                        help='Specify there are multiple add-ons in the working directory')
 
     args = parser.parse_args()
 
-    _addon_xml = get_addon_xml(args.path)
-    if not _addon_xml:
-        print('No addon.xml file found... aborting')
-        sys.exit(1)
+    directories = [args.path]
+    if args.multi:
+        directories = [item for item in os.listdir(args.path)
+                       if os.path.isdir(os.path.join(args.path, item))]
 
-    _po_index = generate_po_index(args.path)
-    if not _po_index:
-        print('No po files found... aborting')
-        sys.exit(1)
+    for directory in directories:
+        print('Running sync-addon-metadata-translations on %s...' % directory)
 
-    _default_po = get_default_po(_po_index)
-    if not _default_po:
-        print('No en_gb po file found... aborting')
-        sys.exit(1)
+        _addon_xml = get_addon_xml(directory)
+        if not _addon_xml:
+            print('No addon.xml file found in %s... aborted' % directory)
+            continue
 
-    if args.po_to_xml:
+        _po_index = generate_po_index(directory)
+        if not _po_index:
+            print('No po files found in %s... aborted' % directory)
+            continue
+
+        _default_po = get_default_po(_po_index)
+        if not _default_po:
+            print('No en_gb po file found... aborted')
+            continue
+
+        if args.po_to_xml:
+            po_to_xml(_addon_xml, _po_index)
+            continue
+
+        if args.xml_to_po:
+            xml_to_po(_addon_xml, _po_index)
+            continue
+
         po_to_xml(_addon_xml, _po_index)
-        sys.exit(0)
-
-    if args.xml_to_po:
         xml_to_po(_addon_xml, _po_index)
-        sys.exit(0)
 
-    po_to_xml(_addon_xml, _po_index)
-    xml_to_po(_addon_xml, _po_index)
     sys.exit(0)
 
 
