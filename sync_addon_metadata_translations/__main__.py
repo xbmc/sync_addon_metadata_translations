@@ -552,7 +552,7 @@ def main():
                         help='Sync po file values to the addon.xml file')
     parser.add_argument('-xtp', '--xml-to-po', action='store_true',
                         help='Sync addon.xml values to all po files')
-    parser.add_argument('-path', '--path', type=directory_type, nargs='?',
+    parser.add_argument('-path', '--path', type=directory_type, nargs='?', default='.',
                         const='.', help='Specify the working directory')
     parser.add_argument('-multi', '--multiple-addons', action='store_true',
                         help='Specify there are multiple add-ons in the working directory')
