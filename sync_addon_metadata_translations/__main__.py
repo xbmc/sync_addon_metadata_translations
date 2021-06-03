@@ -490,7 +490,7 @@ def xml_to_po(addon_xml, po_index):
     write_po_files(po_index, payload_index)
 
 
-def po_to_xml(addon_xml, po_index):
+def po_to_xml(directory, addon_xml, po_index):
     print('Syncing po files to addon.xml...')
 
     xml_descriptions = get_xml_descriptions(addon_xml)
@@ -537,7 +537,7 @@ def po_to_xml(addon_xml, po_index):
               description_lines + disclaimer_lines + payload[insert_index:]
 
     if payload != addon_xml['content_lines']:
-        with open('addon.xml', 'w', encoding='utf-8') as file_handle:
+        with open(os.path.join(directory, 'addon.xml'), 'w', encoding='utf-8') as file_handle:
             file_handle.writelines(payload)
 
         print('addon.xml has been modified... completed')
@@ -552,15 +552,15 @@ def main():
                         help='Sync po file values to the addon.xml file')
     parser.add_argument('-xtp', '--xml-to-po', action='store_true',
                         help='Sync addon.xml values to all po files')
-    parser.add_argument('-path', '--path', type=directory_type, action='store_true',
-                        nargs='?', const='.', help='Specify the working directory')
+    parser.add_argument('-path', '--path', type=directory_type, nargs='?',
+                        const='.', help='Specify the working directory')
     parser.add_argument('-multi', '--multiple-addons', action='store_true',
                         help='Specify there are multiple add-ons in the working directory')
 
     args = parser.parse_args()
 
     directories = [args.path]
-    if args.multi:
+    if args.multiple_addons:
         directories = [item for item in os.listdir(args.path)
                        if os.path.isdir(os.path.join(args.path, item))]
 
@@ -583,14 +583,14 @@ def main():
             continue
 
         if args.po_to_xml:
-            po_to_xml(_addon_xml, _po_index)
+            po_to_xml(directory, _addon_xml, _po_index)
             continue
 
         if args.xml_to_po:
             xml_to_po(_addon_xml, _po_index)
             continue
 
-        po_to_xml(_addon_xml, _po_index)
+        po_to_xml(directory, _addon_xml, _po_index)
         xml_to_po(_addon_xml, _po_index)
 
     sys.exit(0)
