@@ -265,28 +265,29 @@ def merge_items(group_one, group_two):
 
 
 def merge_po_lines(summary_lines, description_lines, disclaimer_lines):
-    count = max(map(len, [summary_lines, description_lines, disclaimer_lines]))
-
     payload = {}
 
-    for index in range(count):
-        try:
-            payload[summary_lines[index][0]] = \
-                payload.get(summary_lines[index][0], []) + summary_lines[index][1]
-        except IndexError:
-            pass
+    en_gb_summary = next((item[1] for item in summary_lines if item[0] == 'en_GB'), [])
+    en_gb_description = next((item[1] for item in description_lines if item[0] == 'en_GB'), [])
+    en_gb_disclaimer = next((item[1] for item in disclaimer_lines if item[0] == 'en_GB'), [])
 
-        try:
-            payload[description_lines[index][0]] = \
-                payload.get(description_lines[index][0], []) + description_lines[index][1]
-        except IndexError:
-            pass
+    languages = list(set(
+        [item[0] for item in summary_lines] +
+        [item[0] for item in description_lines] +
+        [item[0] for item in disclaimer_lines]
+    ))
 
-        try:
-            payload[disclaimer_lines[index][0]] = \
-                payload.get(disclaimer_lines[index][0], []) + disclaimer_lines[index][1]
-        except IndexError:
-            pass
+    for language in languages:
+        payload[language] = []
+        payload[language] += next(
+            (item[1] for item in summary_lines if item[0] == language), en_gb_summary
+        )
+        payload[language] += next(
+            (item[1] for item in description_lines if item[0] == language), en_gb_description
+        )
+        payload[language] += next(
+            (item[1] for item in disclaimer_lines if item[0] == language), en_gb_disclaimer
+        )
 
     return payload
 
