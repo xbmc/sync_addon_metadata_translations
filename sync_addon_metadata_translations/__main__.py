@@ -550,13 +550,13 @@ def po_to_xml(directory, addon_xml, po_index):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-ptx', '--po-to-xml', action='store_true',
-                        help='Sync po file values to the addon.xml file')
+                        help='sync po file values to the addon.xml file')
     parser.add_argument('-xtp', '--xml-to-po', action='store_true',
-                        help='Sync addon.xml values to all po files')
+                        help='sync addon.xml values to all po files')
     parser.add_argument('-path', '--path', type=directory_type, nargs='?', default='.',
-                        const='.', help='Specify the working directory')
+                        const='.', help='working directory')
     parser.add_argument('-multi', '--multiple-addons', action='store_true',
-                        help='Specify there are multiple add-ons in the working directory')
+                        help='multiple add-ons in the working directory')
 
     args = parser.parse_args()
 

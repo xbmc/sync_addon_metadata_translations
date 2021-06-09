@@ -11,5 +11,13 @@ With this tool you can sync a Kodi add-on's metadata (`Summary`, `Description`, 
 - `pip install .`
 
 ### Usage
+```
+sync-addon-metadata-translations [-h] [-ptx] [-xtp] [-path [PATH]] [-multi]
 
-From the add-on's directory execute `sync-addon-metadata-translations`
+optional arguments:
+  -h, --help                    show this help message and exit
+  -ptx, --po-to-xml             sync po file values to the addon.xml file
+  -xtp, --xml-to-po             sync addon.xml values to all po files
+  -path [PATH], --path [PATH]   working directory
+  -multi, --multiple-addons     multiple add-ons in the working directory
+```
