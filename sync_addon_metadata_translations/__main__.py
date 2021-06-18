@@ -592,7 +592,6 @@ def main():
             continue
 
         po_to_xml(directory, _addon_xml, _po_index)
-        xml_to_po(_addon_xml, _po_index)
 
     sys.exit(0)
 
