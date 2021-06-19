@@ -459,8 +459,11 @@ def write_po_files(po_index, output_index):
     print('Writing po files... completed')
 
 
-def xml_to_po(addon_xml, po_index):
+def xml_to_po(addon_xml, po_index, priority='xml'):
     print('Syncing addon.xml to po files...')
+
+    if priority not in ['xml', 'po']:
+        priority = 'xml'
 
     xml_descriptions = get_xml_descriptions(addon_xml)
     xml_disclaimers = get_xml_disclaimers(addon_xml)
@@ -474,9 +477,14 @@ def xml_to_po(addon_xml, po_index):
     po_disclaimers = get_po_metadata(po_index, CTXT_DISCLAIMER)
     po_summaries = get_po_metadata(po_index, CTXT_SUMMARY)
 
-    descriptions = merge_items(xml_descriptions, po_descriptions)
-    disclaimers = merge_items(xml_disclaimers, po_disclaimers)
-    summaries = merge_items(xml_summaries, po_summaries)
+    if priority == 'xml':
+        descriptions = merge_items(xml_descriptions, po_descriptions)
+        disclaimers = merge_items(xml_disclaimers, po_disclaimers)
+        summaries = merge_items(xml_summaries, po_summaries)
+    else:  # 'po'
+        descriptions = merge_items(po_descriptions, xml_descriptions)
+        disclaimers = merge_items(po_disclaimers, xml_disclaimers)
+        summaries = merge_items(po_summaries, xml_summaries)
 
     description_lines = get_po_lines(descriptions, CTXT_DESCRIPTION)
     disclaimer_lines = get_po_lines(disclaimers, CTXT_DISCLAIMER)
@@ -592,6 +600,7 @@ def main():
             continue
 
         po_to_xml(directory, _addon_xml, _po_index)
+        xml_to_po(_addon_xml, _po_index, priority='po')
 
     sys.exit(0)
 
