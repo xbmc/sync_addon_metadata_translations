@@ -11,6 +11,7 @@
 
 import argparse
 import copy
+import fnmatch
 import os
 import re
 import sys
@@ -160,9 +161,26 @@ def xml_remove_tags(addon_xml):
     return addon_xml
 
 
+def walk(directory, pattern):
+    for root, dirs, files in os.walk(directory):
+        for basename in files:
+            if fnmatch.fnmatch(basename, pattern):
+                fname = os.path.join(root, basename)
+                yield fname
+
+
+def find_addon_xml_in(working_directory):
+    for filename in walk(working_directory, 'addon.xml.in'):
+        print('Found addon.xml.in:', filename)
+        return filename
+
+
 def get_addon_xml(working_directory):
     addon_xml = {}
+
     filename_and_path = os.path.join(working_directory, 'addon.xml')
+    if not os.path.isfile(filename_and_path):
+        filename_and_path = find_addon_xml_in(working_directory)  # binary add-on
 
     if os.path.isfile(filename_and_path):
         with open(filename_and_path, encoding='utf-8') as file_handle:
