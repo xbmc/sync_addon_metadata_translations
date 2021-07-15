@@ -533,7 +533,7 @@ def xml_to_po(addon_xml, po_index, priority='xml'):
     write_po_files(po_index, payload_index)
 
 
-def po_to_xml(directory, addon_xml, po_index):
+def po_to_xml(addon_xml, po_index):
     print('Syncing po files to addon.xml...')
 
     xml_descriptions = get_xml_descriptions(addon_xml)
@@ -584,7 +584,7 @@ def po_to_xml(directory, addon_xml, po_index):
               description_lines + disclaimer_lines + payload[insert_index:]
 
     if payload != addon_xml['content_lines']:
-        with open(os.path.join(directory, 'addon.xml'), 'w', encoding='utf-8') as file_handle:
+        with open(addon_xml['filename'], 'w', encoding='utf-8') as file_handle:
             file_handle.writelines(payload)
 
         print('addon.xml has been modified... completed')
@@ -630,14 +630,14 @@ def main():
             continue
 
         if args.po_to_xml:
-            po_to_xml(directory, _addon_xml, _po_index)
+            po_to_xml(_addon_xml, _po_index)
             continue
 
         if args.xml_to_po:
             xml_to_po(_addon_xml, _po_index)
             continue
 
-        po_to_xml(directory, _addon_xml, _po_index)
+        po_to_xml(_addon_xml, _po_index)
         xml_to_po(_addon_xml, _po_index, priority='po')
 
     sys.exit(0)
