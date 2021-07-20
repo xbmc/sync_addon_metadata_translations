@@ -8,7 +8,7 @@ With this tool you can sync a Kodi add-on's metadata (`Summary`, `Description`, 
   
 or 
 
-- `git clone https://github.com/anxdpanic/sync_addon_metadata_translations`
+- `git clone https://github.com/xbmc/sync_addon_metadata_translations`
 
 - `cd <path-to-cloned-repo>`
 
