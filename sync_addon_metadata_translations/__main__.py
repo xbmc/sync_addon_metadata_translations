@@ -174,6 +174,8 @@ def find_addon_xml_in(working_directory):
         print('Found addon.xml.in:', filename)
         return filename
 
+    return ''
+
 
 def get_addon_xml(working_directory):
     addon_xml = {}
