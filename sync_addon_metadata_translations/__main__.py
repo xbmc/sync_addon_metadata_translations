@@ -108,8 +108,7 @@ def get_po_metadata(po_index, ctxt):
             string = string.replace('"', '')
             string = string.replace('%repdq%', '\\"')
 
-            if string:
-                payload.append((po_file['language_code'], string))
+            payload.append((po_file['language_code'], string))
 
     print('{ctxt} from po files...'.format(ctxt=ctxt))
     print(payload)
@@ -568,15 +567,15 @@ def po_to_xml(addon_xml, po_index):
 
     description_lines = [
         XMLTPL_DESCRIPTION.format(whitespace=xml_whitespace, language_code=language_code, body=body)
-        for language_code, body in descriptions
+        for language_code, body in descriptions if body
     ]
     disclaimer_lines = [
         XMLTPL_DISCLAIMER.format(whitespace=xml_whitespace, language_code=language_code, body=body)
-        for language_code, body in disclaimers
+        for language_code, body in disclaimers if body
     ]
     summary_lines = [
         XMLTPL_SUMMARY.format(whitespace=xml_whitespace, language_code=language_code, body=body)
-        for language_code, body in summaries
+        for language_code, body in summaries if body
     ]
 
     insert_index = get_xml_insert_index(addon_xml)
