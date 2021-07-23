@@ -8,4 +8,4 @@
     See LICENSES/GPL-3.0-only.txt for more information.
 """
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
