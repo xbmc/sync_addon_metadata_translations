@@ -1,12 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-    Copyright (C) 2020 anxdpanic
+    Copyright (C) 2021 TeamKodi
 
     This file is part of sync_addon_metadata_translations
 
     SPDX-License-Identifier: GPL-3.0-only
-    See LICENSES/GPL-3.0-only.txt for more information.
+    See LICENSES/GPL-3.0-only for more information.
+
+    With this tool you can sync a Kodi add-on's metadata (Summary, Description, and Disclaimer)
+    translations between the addon.xml and related po files.
+
+    Regular expressions are used instead of an xml parser to avoid changing the formatting of the
+    xml, and addon.xml.in's are not valid xml files until built
+
+    usage: sync-addon-metadata-translations [-h] [-ptx] [-xtp] [-path [PATH]]
+                                        [-multi]
+
+    optional arguments:
+      -h, --help                    show this help message and exit
+      -ptx, --po-to-xml             sync po file values to the addon.xml file
+      -xtp, --xml-to-po             sync addon.xml values to all po files
+      -path [PATH], --path [PATH]   working directory
+      -multi, --multiple-addons     multiple add-ons in the working directory
 """
 
 import argparse
@@ -54,6 +70,14 @@ POTPL_MSGSTR = 'msgstr "{string}"\n'
 
 
 def directory_type(string):
+    """
+    Check if string is a directory, raise NotADirectoryError if not a directory
+    Used by argparse to validate path argument
+    :param string: string to check if it's a directory
+    :type string: str
+    :return: provided string
+    :rtype: str
+    """
     if os.path.isdir(string):
         return string
 
@@ -61,6 +85,15 @@ def directory_type(string):
 
 
 def get_po_metadata(po_index, ctxt):
+    """
+    Get the metadata (translated strings) matching `ctxt` from the po files
+    :param po_index: index of po files from generate_po_index()
+    :type po_index: list[dict]
+    :param ctxt: ctxt to match for retrieval CTXT_DESCRIPTION, CTXT_DISCLAIMER or CTXT_SUMMARY constants
+    :type ctxt: str
+    :return: all translations of `ctxt` from po files, [(<language_code>, <translated string>), ...]
+    :rtype: list[tuple]
+    """
     payload = []
 
     for po_file in po_index:
@@ -117,6 +150,13 @@ def get_po_metadata(po_index, ctxt):
 
 
 def get_xml_descriptions(addon_xml):
+    """
+    Get all the description metadata from the addon.xml
+    :param addon_xml: addon.xml information from get_addon_xml()
+    :type addon_xml: dict
+    :return: descriptions from the addon.xml [(<whitespace>, <language code>, <description>), ...]
+    :rtype: list[tuple]
+    """
     descriptions = RE_DESCRIPTION.findall(addon_xml.get('content', ''))
     print('Descriptions from the addon.xml...')
     print(descriptions)
@@ -125,6 +165,13 @@ def get_xml_descriptions(addon_xml):
 
 
 def get_xml_disclaimers(addon_xml):
+    """
+    Get all the disclaimers metadata from the addon.xml
+    :param addon_xml: addon.xml information from get_addon_xml()
+    :type addon_xml: dict
+    :return: descriptions from the addon.xml [(<whitespace>, <language code>, <disclaimer>), ...]
+    :rtype: list[tuple]
+    """
     disclaimers = RE_DISCLAIMER.findall(addon_xml.get('content', ''))
     print('Disclaimers from the addon.xml...')
     print(disclaimers)
@@ -133,6 +180,13 @@ def get_xml_disclaimers(addon_xml):
 
 
 def get_xml_summaries(addon_xml):
+    """
+    Get all the summaries metadata from the addon.xml
+    :param addon_xml: addon.xml information from get_addon_xml()
+    :type addon_xml: dict
+    :return: descriptions from the addon.xml [(<whitespace>, <language code>, <summary>), ...]
+    :rtype: list[tuple]
+    """
     summaries = RE_SUMMARY.findall(addon_xml.get('content', ''))
     print('Summaries from the addon.xml...')
     print(summaries)
@@ -140,7 +194,14 @@ def get_xml_summaries(addon_xml):
     return summaries
 
 
-def xml_remove_tags(addon_xml):
+def xml_remove_elements(addon_xml):
+    """
+    Remove all descriptions, disclaimers, and summaries from the addon.xml
+    :param addon_xml: addon.xml information from get_addon_xml()
+    :type addon_xml: dict
+    :return: addon.xml information from get_addon_xml() with elements removed
+    :rtype: dict
+    """
     new_lines = []
     for line in addon_xml['content_lines']:
         if 'description lang=' in line:
@@ -161,6 +222,15 @@ def xml_remove_tags(addon_xml):
 
 
 def walk(directory, pattern):
+    """
+    Generator to walk the provided directory and yield files matching the pattern
+    :param directory: directory to recursively walk
+    :type directory: str
+    :param pattern: glob pattern, https://docs.python.org/3/library/fnmatch.html
+    :type pattern: str
+    :return: filenames (with path) matching pattern
+    :rtype: str
+    """
     for root, dirs, files in os.walk(directory):
         for basename in files:
             if fnmatch.fnmatch(basename, pattern):
@@ -169,6 +239,13 @@ def walk(directory, pattern):
 
 
 def find_addon_xml_in(working_directory):
+    """
+    Walk the provided working directory to find the addon.xml.in
+    :param working_directory: directory to recursively search for the addon.xml.in
+    :type working_directory: str
+    :return: path with filename to the addon.xml.in
+    :rtype: str
+    """
     for filename in walk(working_directory, 'addon.xml.in'):
         print('Found addon.xml.in:', filename)
         return filename
@@ -177,6 +254,16 @@ def find_addon_xml_in(working_directory):
 
 
 def get_addon_xml(working_directory):
+    """
+    Get the addon.xml[.in] in the working directory
+    :param working_directory: directory to recursively search for the addon.xml[.in]
+    :type working_directory: str
+    :return: addon.xml information
+             {'filename': <filename with path to addon.xml[.in]>,
+              'content': <contents of the addon.xml[.in] from read()>,
+              'content_lines': <contents of the addon.xml[.in] from readlines()>}
+    :rtype: dict
+    """
     addon_xml = {}
 
     filename_and_path = os.path.join(working_directory, 'addon.xml')
@@ -197,6 +284,13 @@ def get_addon_xml(working_directory):
 
 
 def language_code_from_path(language_path):
+    """
+    Get the language code from the path
+    :param language_path: path containing the language files
+    :type language_path: str
+    :return: language code ie. en_GB
+    :rtype: str
+    """
     language_code = ''
     match = re.search(
         r'resource\.language\.(?P<language_code>[a-z]{2,3}(?:_[A-Za-z]{2})?(?:@\S+)?)',
@@ -213,6 +307,17 @@ def language_code_from_path(language_path):
 
 
 def generate_po_index(working_directory):
+    """
+    Generate and index of all po files in the working directory (recursive)
+    :param working_directory: directory to search for po files
+    :type working_directory: str
+    :return: list of po files found in the working directory
+             [{'filename': <filename with path to the po file>,
+              'language_code': <language code of the po file>,
+              'content': <contents of the po file from read()>,
+              'content_lines': <contents of the po file from readlines()>}, ...]
+    :rtype: list[dict]
+    """
     file_index = []
     for path, _, filenames in list(os.walk(working_directory)):
         if 'resource.language.' not in path:
@@ -238,6 +343,13 @@ def generate_po_index(working_directory):
 
 
 def get_default_po(po_index):
+    """
+    Find the default (en_GB) po file
+    :param po_index: index of po files from generate_po_index()
+    :type po_index: list[dict]
+    :return: default po file information from the po index
+    :rtype: dict
+    """
     for po_file in po_index:
         if po_file['language_code'] in ['en_gb', 'en_GB']:
             return po_file
@@ -246,6 +358,21 @@ def get_default_po(po_index):
 
 
 def get_xml_whitespace(addon_xml, descriptions, disclaimers, summaries):
+    """
+    Get the whitespace used in the xml to keep formatting consistent
+    Descriptions, disclaimers, summaries and other metadata is checked in that order
+    and the first match is used
+    :param addon_xml: addon.xml information from get_addon_xml()
+    :type addon_xml: dict
+    :param descriptions: all the addon.xml descriptions [(<whitespace>, <language code>, <description>), ...]
+    :type descriptions: list[tuple]
+    :param disclaimers: all the addon.xml descriptions [(<whitespace>, <language code>, <disclaimer>), ...]
+    :type disclaimers: list[tuple]
+    :param summaries: all the addon.xml descriptions [(<whitespace>, <language code>, <summary>), ...]
+    :type summaries: list[tuple]
+    :return: whitespace
+    :rtype: str
+    """
     if len(descriptions) > 0:
         return descriptions[0][0]
 
@@ -259,8 +386,17 @@ def get_xml_whitespace(addon_xml, descriptions, disclaimers, summaries):
     if len(whitespace_candidates) > 0:
         return whitespace_candidates[0]
 
+    return ''
+
 
 def get_xml_insert_index(addon_xml):
+    """
+    Find where in the addon.xml to insert metadata
+    :param addon_xml: addon.xml information from get_addon_xml()
+    :type addon_xml: dict
+    :return: index of the line to insert metadata
+    :rtype: int
+    """
     insert_line = -1
 
     for index, line in enumerate(addon_xml['content_lines']):
@@ -275,6 +411,15 @@ def get_xml_insert_index(addon_xml):
 
 
 def merge_items(group_one, group_two):
+    """
+    Merge two lists of tuples, group one will not be overwritten if group[0] matches in both groups
+    :param group_one: xml or po metadata
+    :type group_one: list[tuple]
+    :param group_two: xml or po metadata
+    :type group_two: list[tuple]
+    :return: combined groups
+    :rtype: list[tuple]
+    """
     payload = group_one.copy()
     for group_item in group_two:
         if not any(item for item in payload if item[0] == group_item[0]):
@@ -284,6 +429,17 @@ def merge_items(group_one, group_two):
 
 
 def merge_po_lines(summary_lines, description_lines, disclaimer_lines):
+    """
+    Merge summary, description, disclaimer lines and group by language
+    :param summary_lines: summaries for all po files [(<language_code>, <summary>), ...]
+    :type summary_lines: list[tuple]
+    :param description_lines: descriptions for all po files [(<language_code>, <description>), ...]
+    :type description_lines: list[tuple]
+    :param disclaimer_lines: disclaimers for all po files [(<language_code>, <disclaimer>), ...]
+    :type disclaimer_lines: list[tuple]
+    :return: summary, description, disclaimer lines grouped by language
+    :rtype: dict
+    """
     payload = {}
 
     en_gb_summary = next((item[1] for item in summary_lines if item[0] == 'en_GB'), [])
@@ -312,6 +468,15 @@ def merge_po_lines(summary_lines, description_lines, disclaimer_lines):
 
 
 def get_po_lines(items, ctxt):
+    """
+    Create po lines from descriptions, disclaimers or summaries
+    :param items: descriptions, disclaimers or summaries
+    :type items: list[tuple]
+    :param ctxt: ctxt to use for po lines
+    :type ctxt: str
+    :return: created po lines
+    :rtype: list[tuple]
+    """
     payload = []
 
     en_gb = next((item for item in items if item[0] == 'en_GB'), None)
@@ -335,6 +500,13 @@ def get_po_lines(items, ctxt):
 
 
 def remove_po_lines(po_index):
+    """
+    Remove metadata lines from po files
+    :param po_index: index of po files from generate_po_index()
+    :type po_index: list[dict]
+    :return: po index with metadata lines removed 'content_lines'
+    :rtype: list[dict]
+    """
     payload = copy.deepcopy(po_index)
 
     ctxt_targets = (
@@ -388,6 +560,13 @@ def remove_po_lines(po_index):
 
 
 def get_po_insert_index(po_file):
+    """
+    Find where in the po file to insert metadata
+    :param po_file: contents of po_index[<#>]['content_lines']
+    :type po_file: list
+    :return: index of the line to insert metadata
+    :rtype: int
+    """
     msgstr = False
     first_quote = False
 
@@ -411,6 +590,13 @@ def get_po_insert_index(po_file):
 
 
 def format_po_lines(po_lines):
+    """
+    Format po lines for addition to po files
+    :param po_lines: un-formatted lines to be added to the po file
+    :type po_lines: list
+    :return: formatted lines to be added to the po file
+    :rtype: list
+    """
     format_lines = []
     po_lines = [line for line in po_lines if line.strip()]  # remove empty lines
     po_lines = list(zip(*(iter(po_lines),) * 3))  # group in threes (msgctxt, msgid, msgstr)
@@ -439,6 +625,15 @@ def format_po_lines(po_lines):
 
 
 def insert_po_lines(po_index, po_lines):
+    """
+    Insert po lines into po_index[<#>]['content_lines']
+    :param po_index: index of po files from generate_po_index()
+    :type po_index: list[dict]
+    :param po_lines: un-formatted lines to be added to the po file by language code
+    :type po_lines: dict
+    :return: po_index with po_index[<#>]['content_lines'] updated
+    :rtype: dict
+    """
     payload = copy.deepcopy(po_index)
     languages = list(po_lines.keys())
 
@@ -465,6 +660,13 @@ def insert_po_lines(po_index, po_lines):
 
 
 def write_po_files(po_index, output_index):
+    """
+    Write po files which have altered `po_index`, compared against `output_index`
+    :param po_index: index of po files from generate_po_index()
+    :type po_index: list[dict]
+    :param output_index: index of languages with modified po_index[<#>]['content_lines']
+    :type output_index: dict
+    """
     print('Writing po files... starting')
 
     for index, po_item in enumerate(output_index):
@@ -479,6 +681,15 @@ def write_po_files(po_index, output_index):
 
 
 def escape_quotes(source, dest='po'):
+    """
+    Escape quotes in metadata for target medium; po: `\"`, xml: `&quot;`
+    :param source: list of strings to escape [(<language_code>, <string>), ...]
+    :type source: list[tuple]
+    :param dest: `po` or `xml`
+    :type dest: str
+    :return: escaped strings
+    :rtype: list[tuple]
+    """
     if dest not in ['xml', 'po']:
         dest = 'po'
 
@@ -491,6 +702,15 @@ def escape_quotes(source, dest='po'):
 
 
 def xml_to_po(addon_xml, po_index, priority='xml'):
+    """
+    Sync addon.xml metadata to PO files
+    :param addon_xml: addon.xml information from get_addon_xml()
+    :type addon_xml: dict
+    :param po_index: index of po files from generate_po_index()
+    :type po_index: list[dict]
+    :param priority: which file takes priority if metadata exists in both files; `xml` or `po`
+    :type priority: str
+    """
     print('Syncing addon.xml to po files...')
 
     if priority not in ['xml', 'po']:
@@ -535,13 +755,20 @@ def xml_to_po(addon_xml, po_index, priority='xml'):
 
 
 def po_to_xml(addon_xml, po_index):
+    """
+    Sync PO metadata to addon.xml
+    :param addon_xml: addon.xml information from get_addon_xml()
+    :type addon_xml: dict
+    :param po_index: index of po files from generate_po_index()
+    :type po_index: list[dict]
+    """
     print('Syncing po files to addon.xml...')
 
     xml_descriptions = get_xml_descriptions(addon_xml)
     xml_disclaimers = get_xml_disclaimers(addon_xml)
     xml_summaries = get_xml_summaries(addon_xml)
 
-    addon_xml = xml_remove_tags(addon_xml)
+    addon_xml = xml_remove_elements(addon_xml)
 
     xml_whitespace = get_xml_whitespace(addon_xml, xml_descriptions, xml_disclaimers, xml_summaries)
 
