@@ -407,6 +407,9 @@ def get_xml_insert_index(addon_xml):
             insert_line = index
             break
 
+    if insert_line == -1:
+        raise Exception('Unable to determine addon.xml insert index')
+
     return insert_line
 
 
