@@ -400,7 +400,7 @@ def get_xml_insert_index(addon_xml):
     insert_line = -1
 
     for index, line in enumerate(addon_xml['content_lines']):
-        if '<extension point="xbmc.addon.metadata">' in line:
+        if '<extension' in line and 'xbmc.addon.metadata' in line:
             insert_line = index + 1
 
         if insert_line > -1 and '</extension>' in line:
