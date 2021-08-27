@@ -1,6 +1,6 @@
 ## Sync Add-on Metadata Translations
 
-With this tool you can sync a Kodi add-on's metadata (`Summary`, `Description`, and `Disclaimer`) translations between the addon.xml and related po files.
+With this tool you can sync a Kodi add-on's metadata (`Summary`, `Description`, `Disclaimer`, and `Lifecyclestates`) translations between the addon.xml and related po files.
 
 ### Installation
 
@@ -16,7 +16,7 @@ or
 
 ### Usage
 ```
-sync-addon-metadata-translations [-h] [-ptx] [-xtp] [-path [PATH]] [-multi]
+sync-addon-metadata-translations [-h] [-ptx] [-xtp] [-path [PATH]] [-multi] [-v]
 
 optional arguments:
   -h, --help                    show this help message and exit
@@ -24,4 +24,5 @@ optional arguments:
   -xtp, --xml-to-po             sync addon.xml values to all po files
   -path [PATH], --path [PATH]   working directory
   -multi, --multiple-addons     multiple add-ons in the working directory
+  -v, --version                 prints the version of sync-addon-metadata-translations
 ```

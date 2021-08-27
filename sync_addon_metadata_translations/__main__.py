@@ -8,14 +8,13 @@
     SPDX-License-Identifier: GPL-3.0-only
     See LICENSES/GPL-3.0-only for more information.
 
-    With this tool you can sync a Kodi add-on's metadata (Summary, Description, and Disclaimer)
+    With this tool you can sync a Kodi add-on's metadata (Summary, Description, Disclaimer, and Lifecyclestates)
     translations between the addon.xml and related po files.
 
     Regular expressions are used instead of an xml parser to avoid changing the formatting of the
     xml, and addon.xml.in's are not valid xml files until built
 
-    usage: sync-addon-metadata-translations [-h] [-ptx] [-xtp] [-path [PATH]]
-                                        [-multi]
+    usage: sync-addon-metadata-translations [-h] [-ptx] [-xtp] [-path [PATH]] [-multi] [-v]
 
     optional arguments:
       -h, --help                    show this help message and exit
@@ -23,6 +22,7 @@
       -xtp, --xml-to-po             sync addon.xml values to all po files
       -path [PATH], --path [PATH]   working directory
       -multi, --multiple-addons     multiple add-ons in the working directory
+      -v, --version                 prints the version of sync-addon-metadata-translations
 """
 
 import argparse
@@ -32,9 +32,12 @@ import os
 import re
 import sys
 
+from . import __version__
+
 CTXT_DESCRIPTION = 'Addon Description'
 CTXT_DISCLAIMER = 'Addon Disclaimer'
 CTXT_SUMMARY = 'Addon Summary'
+CTXT_LIFECYCLESTATE = 'Addon Lifecyclestate'
 
 RE_DESCRIPTION = re.compile(r'^(?P<whitespace>\s*?)<description lang=["\']'
                             r'(?P<language_code>[^"\']+?)["\']>'
@@ -51,6 +54,16 @@ RE_SUMMARY = re.compile(r'^(?P<whitespace>\s*?)<summary lang=["\']'
                         r'(?P<body>[^<]+?)</summary>\s*?$',
                         re.MULTILINE)
 
+RE_LIFECYCLESTATE = re.compile(r'^(?P<whitespace>\s*?)'
+                               r'<lifecyclestate.+?lang=["\'](?P<language_code>[^"\']+?)["\'][^>]*>'
+                               r'(?P<body>[^<]+?)</lifecyclestate>\s*?$',
+                               re.MULTILINE)
+
+RE_LIFECYCLESTATE_TYPE = re.compile(r'^(?P<whitespace>\s*?)'
+                                    r'<lifecyclestate.+?type=["\'](?P<type>[^"\']+?)["\'][^>]*>'
+                                    r'(?P<body>[^<]+?)</lifecyclestate>\s*?$',
+                                    re.MULTILINE)
+
 RE_METADATA_WHITESPACE = re.compile(r'^(?P<whitespace>\s*?)<'
                                     r'(?:news|assets|platform|license|'
                                     r'source|forum|reuselanguageinvoker)'
@@ -63,6 +76,8 @@ RE_METADATA_WHITESPACE = re.compile(r'^(?P<whitespace>\s*?)<'
 XMLTPL_DESCRIPTION = '{whitespace}<description lang="{language_code}">{body}</description>\n'
 XMLTPL_DISCLAIMER = '{whitespace}<disclaimer lang="{language_code}">{body}</disclaimer>\n'
 XMLTPL_SUMMARY = '{whitespace}<summary lang="{language_code}">{body}</summary>\n'
+XMLTPL_LIFECYCLESTATE = '{whitespace}<lifecyclestate type="{type}" lang="{language_code}">' \
+                        '{body}</lifecyclestate>\n'
 
 POTPL_MSGCTXT = 'msgctxt "{string}"\n'
 POTPL_MSGID = 'msgid "{string}"\n'
@@ -89,7 +104,7 @@ def get_po_metadata(po_index, ctxt):
     Get the metadata (translated strings) matching `ctxt` from the po files
     :param po_index: index of po files from generate_po_index()
     :type po_index: list[dict]
-    :param ctxt: ctxt to match for retrieval CTXT_DESCRIPTION, CTXT_DISCLAIMER or CTXT_SUMMARY constants
+    :param ctxt: ctxt to match for retrieval CTXT_DESCRIPTION, CTXT_DISCLAIMER, CTXT_LIFECYCLESTATE or CTXT_SUMMARY constants
     :type ctxt: str
     :return: all translations of `ctxt` from po files, [(<language_code>, <translated string>), ...]
     :rtype: list[tuple]
@@ -184,7 +199,7 @@ def get_xml_summaries(addon_xml):
     Get all the summaries metadata from the addon.xml
     :param addon_xml: addon.xml information from get_addon_xml()
     :type addon_xml: dict
-    :return: descriptions from the addon.xml [(<whitespace>, <language code>, <summary>), ...]
+    :return: summaries from the addon.xml [(<whitespace>, <language code>, <summary>), ...]
     :rtype: list[tuple]
     """
     summaries = RE_SUMMARY.findall(addon_xml.get('content', ''))
@@ -192,6 +207,21 @@ def get_xml_summaries(addon_xml):
     print(summaries)
     print('')
     return summaries
+
+
+def get_xml_lifecyclestates(addon_xml):
+    """
+    Get all the lifecyclestates metadata from the addon.xml
+    :param addon_xml: addon.xml information from get_addon_xml()
+    :type addon_xml: dict
+    :return: lifecyclestates from the addon.xml [(<whitespace>, <language code>, <lifecyclestate>), ...]
+    :rtype: list[tuple]
+    """
+    lifecyclestates = RE_LIFECYCLESTATE.findall(addon_xml.get('content', ''))
+    print('Lifecyclestates from the addon.xml...')
+    print(lifecyclestates)
+    print('')
+    return lifecyclestates
 
 
 def xml_remove_elements(addon_xml):
@@ -204,13 +234,16 @@ def xml_remove_elements(addon_xml):
     """
     new_lines = []
     for line in addon_xml['content_lines']:
-        if 'description lang=' in line:
+        if '<description lang=' in line:
             continue
 
-        if 'disclaimer lang=' in line:
+        if '<disclaimer lang=' in line:
             continue
 
-        if 'summary lang=' in line:
+        if '<summary lang=' in line:
+            continue
+
+        if '<lifecyclestate ' in line:
             continue
 
         new_lines.append(line)
@@ -357,7 +390,7 @@ def get_default_po(po_index):
     return {}
 
 
-def get_xml_whitespace(addon_xml, descriptions, disclaimers, summaries):
+def get_xml_whitespace(addon_xml, descriptions, disclaimers, summaries, lifecyclestates):
     """
     Get the whitespace used in the xml to keep formatting consistent
     Descriptions, disclaimers, summaries and other metadata is checked in that order
@@ -366,10 +399,12 @@ def get_xml_whitespace(addon_xml, descriptions, disclaimers, summaries):
     :type addon_xml: dict
     :param descriptions: all the addon.xml descriptions [(<whitespace>, <language code>, <description>), ...]
     :type descriptions: list[tuple]
-    :param disclaimers: all the addon.xml descriptions [(<whitespace>, <language code>, <disclaimer>), ...]
+    :param disclaimers: all the addon.xml disclaimers [(<whitespace>, <language code>, <disclaimer>), ...]
     :type disclaimers: list[tuple]
-    :param summaries: all the addon.xml descriptions [(<whitespace>, <language code>, <summary>), ...]
+    :param summaries: all the addon.xml summaries [(<whitespace>, <language code>, <summary>), ...]
     :type summaries: list[tuple]
+    :param lifecyclestates: all the addon.xml lifecyclestates [(<whitespace>, <language code>, <lifecyclestates>), ...]
+    :type lifecyclestates: list[tuple]
     :return: whitespace
     :rtype: str
     """
@@ -382,11 +417,30 @@ def get_xml_whitespace(addon_xml, descriptions, disclaimers, summaries):
     if len(summaries) > 0:
         return summaries[0][0]
 
+    if len(lifecyclestates) > 0:
+        return lifecyclestates[0][0]
+
     whitespace_candidates = RE_METADATA_WHITESPACE.findall(addon_xml['content'])
     if len(whitespace_candidates) > 0:
         return whitespace_candidates[0]
 
     return ''
+
+
+def get_lifecyclestate_type(addon_xml):
+    """
+    Get the lifecyclestate type attribute value
+    :param addon_xml: addon.xml information from get_addon_xml()
+    :type addon_xml: dict
+    :return: lifecyclestate type attribute value
+    :rtype: str|None
+    """
+    found_type = RE_LIFECYCLESTATE_TYPE.search(addon_xml.get('content', ''))
+
+    if found_type:
+        return found_type.group('type')
+
+    return None
 
 
 def get_xml_insert_index(addon_xml):
@@ -431,7 +485,7 @@ def merge_items(group_one, group_two):
     return payload
 
 
-def merge_po_lines(summary_lines, description_lines, disclaimer_lines):
+def merge_po_lines(summary_lines, description_lines, disclaimer_lines, lifecyclestate_lines):
     """
     Merge summary, description, disclaimer lines and group by language
     :param summary_lines: summaries for all po files [(<language_code>, <summary>), ...]
@@ -440,7 +494,9 @@ def merge_po_lines(summary_lines, description_lines, disclaimer_lines):
     :type description_lines: list[tuple]
     :param disclaimer_lines: disclaimers for all po files [(<language_code>, <disclaimer>), ...]
     :type disclaimer_lines: list[tuple]
-    :return: summary, description, disclaimer lines grouped by language
+    :param lifecyclestate_lines: lifecyclestates for all po files [(<language_code>, <lifecyclestate>), ...]
+    :type lifecyclestate_lines: list[tuple]
+    :return: summary, description, disclaimer, lifecyclestate lines grouped by language
     :rtype: dict
     """
     payload = {}
@@ -448,11 +504,14 @@ def merge_po_lines(summary_lines, description_lines, disclaimer_lines):
     en_gb_summary = next((item[1] for item in summary_lines if item[0] == 'en_GB'), [])
     en_gb_description = next((item[1] for item in description_lines if item[0] == 'en_GB'), [])
     en_gb_disclaimer = next((item[1] for item in disclaimer_lines if item[0] == 'en_GB'), [])
+    en_gb_lifecyclestate = \
+        next((item[1] for item in lifecyclestate_lines if item[0] == 'en_GB'), [])
 
     languages = list(set(
         [item[0] for item in summary_lines] +
         [item[0] for item in description_lines] +
-        [item[0] for item in disclaimer_lines]
+        [item[0] for item in disclaimer_lines] +
+        [item[0] for item in lifecyclestate_lines]
     ))
 
     for language in languages:
@@ -465,6 +524,9 @@ def merge_po_lines(summary_lines, description_lines, disclaimer_lines):
         )
         payload[language] += next(
             (item[1] for item in disclaimer_lines if item[0] == language), en_gb_disclaimer
+        )
+        payload[language] += next(
+            (item[1] for item in lifecyclestate_lines if item[0] == language), en_gb_lifecyclestate
         )
 
     return payload
@@ -515,7 +577,8 @@ def remove_po_lines(po_index):
     ctxt_targets = (
         'msgctxt "{ctxt}"'.format(ctxt=CTXT_SUMMARY),
         'msgctxt "{ctxt}"'.format(ctxt=CTXT_DESCRIPTION),
-        'msgctxt "{ctxt}"'.format(ctxt=CTXT_DISCLAIMER)
+        'msgctxt "{ctxt}"'.format(ctxt=CTXT_DISCLAIMER),
+        'msgctxt "{ctxt}"'.format(ctxt=CTXT_LIFECYCLESTATE)
     )
 
     for index, po_item in enumerate(po_index):
@@ -615,6 +678,10 @@ def format_po_lines(po_lines):
 
         if lines[0].startswith('msgctxt "{ctxt}"'.format(ctxt=CTXT_DISCLAIMER)):
             format_lines.append((lines, 2))
+            continue
+
+        if lines[0].startswith('msgctxt "{ctxt}"'.format(ctxt=CTXT_LIFECYCLESTATE)):
+            format_lines.append((lines, 3))
             continue
 
     format_lines.sort(key=lambda x: x[1])
@@ -719,6 +786,12 @@ def xml_to_po(addon_xml, po_index, priority='xml'):
     if priority not in ['xml', 'po']:
         priority = 'xml'
 
+    lifecyclestate_type = get_lifecyclestate_type(addon_xml)
+
+    xml_lifecyclestates = []
+    if lifecyclestate_type:
+        xml_lifecyclestates = get_xml_lifecyclestates(addon_xml)
+
     xml_descriptions = get_xml_descriptions(addon_xml)
     xml_disclaimers = get_xml_disclaimers(addon_xml)
     xml_summaries = get_xml_summaries(addon_xml)
@@ -726,29 +799,36 @@ def xml_to_po(addon_xml, po_index, priority='xml'):
     xml_descriptions = [(language_code, body) for _, language_code, body in xml_descriptions]
     xml_disclaimers = [(language_code, body) for _, language_code, body in xml_disclaimers]
     xml_summaries = [(language_code, body) for _, language_code, body in xml_summaries]
+    xml_lifecyclestates = [(language_code, body) for _, language_code, body in xml_lifecyclestates]
 
     po_descriptions = get_po_metadata(po_index, CTXT_DESCRIPTION)
     po_disclaimers = get_po_metadata(po_index, CTXT_DISCLAIMER)
     po_summaries = get_po_metadata(po_index, CTXT_SUMMARY)
+    po_lifecyclestates = get_po_metadata(po_index, CTXT_LIFECYCLESTATE)
 
     if priority == 'xml':
         descriptions = merge_items(xml_descriptions, po_descriptions)
         disclaimers = merge_items(xml_disclaimers, po_disclaimers)
         summaries = merge_items(xml_summaries, po_summaries)
+        lifecyclestates = merge_items(xml_lifecyclestates, po_lifecyclestates)
     else:  # 'po'
         descriptions = merge_items(po_descriptions, xml_descriptions)
         disclaimers = merge_items(po_disclaimers, xml_disclaimers)
         summaries = merge_items(po_summaries, xml_summaries)
+        lifecyclestates = merge_items(po_lifecyclestates, xml_lifecyclestates)
 
     descriptions = escape_quotes(descriptions, dest='po')
     disclaimers = escape_quotes(disclaimers, dest='po')
     summaries = escape_quotes(summaries, dest='po')
+    lifecyclestates = escape_quotes(lifecyclestates, dest='po')
 
     description_lines = get_po_lines(descriptions, CTXT_DESCRIPTION)
     disclaimer_lines = get_po_lines(disclaimers, CTXT_DISCLAIMER)
     summary_lines = get_po_lines(summaries, CTXT_SUMMARY)
+    lifecyclestate_lines = get_po_lines(lifecyclestates, CTXT_LIFECYCLESTATE)
 
-    po_lines = merge_po_lines(summary_lines, description_lines, disclaimer_lines)
+    po_lines = merge_po_lines(summary_lines, description_lines,
+                              disclaimer_lines, lifecyclestate_lines)
 
     payload_index = remove_po_lines(po_index)
 
@@ -766,6 +846,11 @@ def po_to_xml(addon_xml, po_index):
     :type po_index: list[dict]
     """
     print('Syncing po files to addon.xml...')
+    lifecyclestate_type = get_lifecyclestate_type(addon_xml)
+
+    xml_lifecyclestates = []
+    if lifecyclestate_type:
+        xml_lifecyclestates = get_xml_lifecyclestates(addon_xml)
 
     xml_descriptions = get_xml_descriptions(addon_xml)
     xml_disclaimers = get_xml_disclaimers(addon_xml)
@@ -773,27 +858,33 @@ def po_to_xml(addon_xml, po_index):
 
     addon_xml = xml_remove_elements(addon_xml)
 
-    xml_whitespace = get_xml_whitespace(addon_xml, xml_descriptions, xml_disclaimers, xml_summaries)
+    xml_whitespace = get_xml_whitespace(addon_xml, xml_descriptions, xml_disclaimers,
+                                        xml_summaries, xml_lifecyclestates)
 
     xml_descriptions = [(language_code, body) for _, language_code, body in xml_descriptions]
     xml_disclaimers = [(language_code, body) for _, language_code, body in xml_disclaimers]
     xml_summaries = [(language_code, body) for _, language_code, body in xml_summaries]
+    xml_lifecyclestates = [(language_code, body) for _, language_code, body in xml_lifecyclestates]
 
     po_descriptions = get_po_metadata(po_index, CTXT_DESCRIPTION)
     po_disclaimers = get_po_metadata(po_index, CTXT_DISCLAIMER)
     po_summaries = get_po_metadata(po_index, CTXT_SUMMARY)
+    po_lifecyclestates = get_po_metadata(po_index, CTXT_LIFECYCLESTATE)
 
     descriptions = merge_items(po_descriptions, xml_descriptions)
     disclaimers = merge_items(po_disclaimers, xml_disclaimers)
     summaries = merge_items(po_summaries, xml_summaries)
+    lifecyclestates = merge_items(po_lifecyclestates, xml_lifecyclestates)
 
     descriptions = escape_quotes(descriptions, dest='xml')
     disclaimers = escape_quotes(disclaimers, dest='xml')
     summaries = escape_quotes(summaries, dest='xml')
+    lifecyclestates = escape_quotes(lifecyclestates, dest='xml')
 
     descriptions.sort(key=lambda item: item[0])
     disclaimers.sort(key=lambda item: item[0])
     summaries.sort(key=lambda item: item[0])
+    lifecyclestates.sort(key=lambda item: item[0])
 
     description_lines = [
         XMLTPL_DESCRIPTION.format(whitespace=xml_whitespace, language_code=language_code, body=body)
@@ -807,12 +898,17 @@ def po_to_xml(addon_xml, po_index):
         XMLTPL_SUMMARY.format(whitespace=xml_whitespace, language_code=language_code, body=body)
         for language_code, body in summaries if body
     ]
+    lifecyclestate_lines = [
+        XMLTPL_LIFECYCLESTATE.format(whitespace=xml_whitespace, type=lifecyclestate_type,
+                                     language_code=language_code, body=body)
+        for language_code, body in lifecyclestates if body
+    ]
 
     insert_index = get_xml_insert_index(addon_xml)
     payload = addon_xml['content_lines'].copy()
 
-    payload = payload[:insert_index] + summary_lines + \
-              description_lines + disclaimer_lines + payload[insert_index:]
+    payload = payload[:insert_index] + summary_lines + description_lines + disclaimer_lines + \
+              lifecyclestate_lines + payload[insert_index:]
 
     if payload != addon_xml['content_lines']:
         with open(addon_xml['filename'], 'w', encoding='utf-8') as file_handle:
@@ -834,8 +930,14 @@ def main():
                         const='.', help='working directory')
     parser.add_argument('-multi', '--multiple-addons', action='store_true',
                         help='multiple add-ons in the working directory')
+    parser.add_argument('-v', '--version', action='store_true',
+                        help='prints the version of sync-addon-metadata-translations')
 
     args = parser.parse_args()
+
+    if args.version:
+        print('Version %s' % __version__)
+        sys.exit(0)
 
     directories = [args.path]
     if args.multiple_addons:
