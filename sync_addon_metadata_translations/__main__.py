@@ -14,8 +14,7 @@
     Regular expressions are used instead of an xml parser to avoid changing the formatting of the
     xml, and addon.xml.in's are not valid xml files until built
 
-    usage: sync-addon-metadata-translations [-h] [-ptx] [-xtp] [-path [PATH]]
-                                        [-multi]
+    usage: sync-addon-metadata-translations [-h] [-ptx] [-xtp] [-path [PATH]] [-multi] [-v]
 
     optional arguments:
       -h, --help                    show this help message and exit
@@ -23,6 +22,7 @@
       -xtp, --xml-to-po             sync addon.xml values to all po files
       -path [PATH], --path [PATH]   working directory
       -multi, --multiple-addons     multiple add-ons in the working directory
+      -v, --version                 prints the version of sync-addon-metadata-translations
 """
 
 import argparse
@@ -31,6 +31,8 @@ import fnmatch
 import os
 import re
 import sys
+
+from . import __version__
 
 CTXT_DESCRIPTION = 'Addon Description'
 CTXT_DISCLAIMER = 'Addon Disclaimer'
@@ -834,8 +836,14 @@ def main():
                         const='.', help='working directory')
     parser.add_argument('-multi', '--multiple-addons', action='store_true',
                         help='multiple add-ons in the working directory')
+    parser.add_argument('-v', '--version', action='store_true',
+                        help='prints the version of sync-addon-metadata-translations')
 
     args = parser.parse_args()
+
+    if args.version:
+        print('Version %s' % __version__)
+        sys.exit(0)
 
     directories = [args.path]
     if args.multiple_addons:
