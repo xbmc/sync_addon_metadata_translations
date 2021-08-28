@@ -726,6 +726,16 @@ def insert_po_lines(po_index, po_lines):
                                               insert_lines + \
                                               po_item['content_lines'][insert_index:]
 
+            # remove whitespace from eof
+            for idx, line in reversed(list(enumerate(payload[index]['content_lines']))):
+                if line.strip() == '':
+                    del payload[index]['content_lines'][idx]
+                else:
+                    break
+
+            # ensure one new line at end of file
+            po_item['content_lines'] += ['\n']
+
     return payload
 
 
