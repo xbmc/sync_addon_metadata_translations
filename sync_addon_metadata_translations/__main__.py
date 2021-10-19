@@ -760,7 +760,7 @@ def write_po_files(po_index, output_index):
     print('Writing po files... completed')
 
 
-def escape_quotes(source, dest='po'):
+def escape_characters(source, dest='po'):
     """
     Escape quotes in metadata for target medium; po: `\"`, xml: `&quot;`
     :param source: list of strings to escape [(<language_code>, <string>), ...]
@@ -777,8 +777,17 @@ def escape_quotes(source, dest='po'):
         return [(lang_code, string.replace(r'&quot;', r'\"'))
                 for lang_code, string in source]
     else:
-        return [(lang_code, string.replace(r'\"', r'&quot;'))
-                for lang_code, string in source]
+        return [
+            (
+                lang_code,
+                string.replace(r'\"', r'&quot;')
+                    .replace(r'\'', r'&apos;')
+                    .replace(r'<', r'&lt;')
+                    .replace(r'>', r'&gt;')
+                    .replace(r'&', r'&amp;'),
+            )
+            for lang_code, string in source
+        ]
 
 
 def xml_to_po(addon_xml, po_index, priority='xml'):
@@ -827,10 +836,10 @@ def xml_to_po(addon_xml, po_index, priority='xml'):
         summaries = merge_items(po_summaries, xml_summaries)
         lifecyclestates = merge_items(po_lifecyclestates, xml_lifecyclestates)
 
-    descriptions = escape_quotes(descriptions, dest='po')
-    disclaimers = escape_quotes(disclaimers, dest='po')
-    summaries = escape_quotes(summaries, dest='po')
-    lifecyclestates = escape_quotes(lifecyclestates, dest='po')
+    descriptions = escape_characters(descriptions, dest='po')
+    disclaimers = escape_characters(disclaimers, dest='po')
+    summaries = escape_characters(summaries, dest='po')
+    lifecyclestates = escape_characters(lifecyclestates, dest='po')
 
     description_lines = get_po_lines(descriptions, CTXT_DESCRIPTION)
     disclaimer_lines = get_po_lines(disclaimers, CTXT_DISCLAIMER)
@@ -886,10 +895,10 @@ def po_to_xml(addon_xml, po_index):
     summaries = merge_items(po_summaries, xml_summaries)
     lifecyclestates = merge_items(po_lifecyclestates, xml_lifecyclestates)
 
-    descriptions = escape_quotes(descriptions, dest='xml')
-    disclaimers = escape_quotes(disclaimers, dest='xml')
-    summaries = escape_quotes(summaries, dest='xml')
-    lifecyclestates = escape_quotes(lifecyclestates, dest='xml')
+    descriptions = escape_characters(descriptions, dest='xml')
+    disclaimers = escape_characters(disclaimers, dest='xml')
+    summaries = escape_characters(summaries, dest='xml')
+    lifecyclestates = escape_characters(lifecyclestates, dest='xml')
 
     descriptions.sort(key=lambda item: item[0])
     disclaimers.sort(key=lambda item: item[0])
