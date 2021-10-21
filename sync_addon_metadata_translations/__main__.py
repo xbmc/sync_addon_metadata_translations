@@ -726,15 +726,15 @@ def insert_po_lines(po_index, po_lines):
                                               insert_lines + \
                                               po_item['content_lines'][insert_index:]
 
-            # remove whitespace from eof
-            for idx, line in reversed(list(enumerate(payload[index]['content_lines']))):
-                if line.strip() == '':
-                    del payload[index]['content_lines'][idx]
-                else:
-                    break
+        # remove whitespace from eof
+        for idx, line in reversed(list(enumerate(payload[index]['content_lines']))):
+            if line.strip() == '':
+                del payload[index]['content_lines'][idx]
+            else:
+                break
 
-            # ensure one new line at end of file
-            po_item['content_lines'] += ['\n']
+        # ensure one new line at end of file
+        po_item['content_lines'] += ['\n']
 
     return payload
 
@@ -774,17 +774,26 @@ def escape_characters(source, dest='po'):
         dest = 'po'
 
     if dest == 'po':
-        return [(lang_code, string.replace(r'&quot;', r'\"'))
-                for lang_code, string in source]
+        return [
+            (
+                lang_code,
+                string.replace(r'&quot;', r'\"')
+                    .replace(r'&apos;', r'\'')
+                    .replace(r'&lt;', r'<')
+                    .replace(r'&gt;', r'>')
+                    .replace(r'&amp;', r'&'),
+            )
+            for lang_code, string in source
+        ]
     else:
         return [
             (
                 lang_code,
-                string.replace(r'\"', r'&quot;')
+                string.replace(r'&', r'&amp;')
+                    .replace(r'\"', r'&quot;')
                     .replace(r'\'', r'&apos;')
                     .replace(r'<', r'&lt;')
-                    .replace(r'>', r'&gt;')
-                    .replace(r'&', r'&amp;'),
+                    .replace(r'>', r'&gt;'),
             )
             for lang_code, string in source
         ]
