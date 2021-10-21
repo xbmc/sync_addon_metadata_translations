@@ -774,17 +774,26 @@ def escape_characters(source, dest='po'):
         dest = 'po'
 
     if dest == 'po':
-        return [(lang_code, string.replace(r'&quot;', r'\"'))
-                for lang_code, string in source]
+        return [
+            (
+                lang_code,
+                string.replace(r'&quot;', r'\"')
+                    .replace(r'&apos;', r'\'')
+                    .replace(r'&lt;', r'<')
+                    .replace(r'&gt;', r'>')
+                    .replace(r'&amp;', r'&'),
+            )
+            for lang_code, string in source
+        ]
     else:
         return [
             (
                 lang_code,
-                string.replace(r'\"', r'&quot;')
+                string.replace(r'&', r'&amp;')
+                    .replace(r'\"', r'&quot;')
                     .replace(r'\'', r'&apos;')
                     .replace(r'<', r'&lt;')
-                    .replace(r'>', r'&gt;')
-                    .replace(r'&', r'&amp;'),
+                    .replace(r'>', r'&gt;'),
             )
             for lang_code, string in source
         ]
