@@ -32,6 +32,9 @@ import os
 import re
 import sys
 
+from html import escape
+from html import unescape
+
 from . import __version__
 
 CTXT_DESCRIPTION = 'Addon Description'
@@ -777,28 +780,15 @@ def escape_characters(source, dest='po'):
         return [
             (
                 lang_code,
-                string.replace(r'&quot;', r'\"')
-                    .replace(r'&#34;', r'\"')
-                    .replace(r'&apos;', r'\'')
-                    .replace(r'&#39;', r'\'')
-                    .replace(r'&lt;', r'<')
-                    .replace(r'&#60;', r'<')
-                    .replace(r'&gt;', r'>')
-                    .replace(r'&#62;', r'>')
-                    .replace(r'&amp;', r'&')
-                    .replace(r'&#38;', r'&'),
-        )
+                unescape(string).replace(r'"', r'\"')
+            )
             for lang_code, string in source
         ]
     else:
         return [
             (
                 lang_code,
-                string.replace(r'&', r'&amp;')
-                    .replace(r'\"', r'&quot;')
-                    .replace(r'\'', r'&apos;')
-                    .replace(r'<', r'&lt;')
-                    .replace(r'>', r'&gt;'),
+                escape(string).replace(r'\&quot;', r'&quot;')
             )
             for lang_code, string in source
         ]
