@@ -790,7 +790,7 @@ def escape_characters(source, dest='po'):
                 lang_code,
                 escape(string.replace(r'\"', r'"'))
                     .replace(r'&#39;', '&apos;')
-                    .replace(r'&#27;', '&apos;')
+                    .replace(r'&#x27;', '&apos;')
             )
             for lang_code, string in source
         ]
