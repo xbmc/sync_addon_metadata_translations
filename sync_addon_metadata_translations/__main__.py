@@ -146,15 +146,15 @@ def get_po_metadata(po_index, ctxt):
                         string += line.replace('msgstr ', '')
                         continue
 
-                    if not line.startswith('"'):
+                    if line.startswith(('msgctxt', '#')):
                         break
 
                     string += line
                     continue
 
         if string:
-            string = string.replace('"\n"', '')
-            string = string.replace('\n', '')
+            string = string.lstrip('\n')
+            string = string.rstrip('\n')
             string = string.replace('\\"', '%repdq%')
             string = string.replace('"', '')
             string = string.replace('%repdq%', '\\"')
@@ -584,14 +584,22 @@ def remove_po_lines(po_index):
         'msgctxt "{ctxt}"'.format(ctxt=CTXT_LIFECYCLESTATE)
     )
 
+    token = '"'
+
     for index, po_item in enumerate(po_index):
         msgctxt = False
         msgid = False
         msgstr = False
+        token_count = 0
 
         payload[index]['content_lines'] = []
+        head = []
+        tail = []
+        in_head = True
+
         for line in po_item['content_lines']:
             if not msgctxt and line.startswith(ctxt_targets):
+                in_head = False
                 msgctxt = True
                 continue
 
@@ -605,25 +613,33 @@ def remove_po_lines(po_index):
                 if not msgstr:
                     if line.startswith('msgstr '):
                         msgstr = True
+                        escaped_tokens = line.count(r'\{token}'.format(token=token))
+                        token_count = line.count(token) - escaped_tokens
+                        if token_count == 2:
+                            msgctxt = False
+                            msgid = False
+                            msgstr = False
+                            token_count = 0
                     continue
 
             if msgctxt and msgid and msgstr:
-
-                if not line.strip():
+                escaped_tokens = line.count(r'\{token}'.format(token=token))
+                token_count += (line.count(token) - escaped_tokens)
+                if token_count == 2:
                     msgctxt = False
                     msgid = False
                     msgstr = False
+                    token_count = 0
+                continue
+
+            if in_head:
+                head += [line]
+            else:
+                if not tail and not line.strip():
                     continue
+                tail += [line]
 
-                elif line.startswith('"'):
-                    continue
-
-                else:
-                    msgctxt = False
-                    msgid = False
-                    msgstr = False
-
-            payload[index]['content_lines'] = payload[index].get('content_lines', []) + [line]
+        payload[index]['content_lines'] = head + tail
 
     return payload
 
@@ -781,6 +797,7 @@ def escape_characters(source, dest='po'):
             (
                 lang_code,
                 unescape(string)
+                    .replace('[CR]', '\n')
             )
             for lang_code, string in source
         ]
@@ -788,9 +805,11 @@ def escape_characters(source, dest='po'):
         return [
             (
                 lang_code,
-                escape(string.replace(r'\"', r'"'))
+                escape(string.replace(r'\"', r'"').replace('\n', '[CR]'))
                     .replace(r'&#39;', '&apos;')
                     .replace(r'&#x27;', '&apos;')
+                    .replace(r'&#10;', '[CR]')
+                    .replace(r'&amp;#10;', '[CR]')  # remove in the future; fix issue caused by older versions
             )
             for lang_code, string in source
         ]
