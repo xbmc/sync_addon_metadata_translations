@@ -797,7 +797,7 @@ def escape_characters(source, dest='po'):
             (
                 lang_code,
                 unescape(string)
-                    .replace('[CR]', '\n')
+                    .replace('\n', '[CR]')
             )
             for lang_code, string in source
         ]
