@@ -125,7 +125,7 @@ def get_po_metadata(po_index, ctxt):
                 continue
 
             if msgctxt:
-                if po_file['language_code'] == 'en_GB':
+                if po_file['default'] is True:
                     if not msgstr and line.startswith('msgid '):
                         msgstr = True
                         string += line.replace('msgid ', '')
@@ -159,7 +159,7 @@ def get_po_metadata(po_index, ctxt):
             string = string.replace('"', '')
             string = string.replace('%repdq%', '\\"')
 
-            payload.append((po_file['language_code'], string))
+            payload.append((po_file['language_code'], string, po_file['default']))
 
     print('{ctxt} from po files...'.format(ctxt=ctxt))
     print(payload)
@@ -274,26 +274,30 @@ def walk(directory, pattern):
                 yield fname
 
 
-def find_addon_xml_in(working_directory):
+def find_addon_xml(working_directory, xml_filename='addon.xml.in'):
     """
-    Walk the provided working directory to find the addon.xml.in
-    :param working_directory: directory to recursively search for the addon.xml.in
+    Walk the provided working directory to find the addon.xml
+    :param working_directory: directory to recursively search for the `xml_filename`
     :type working_directory: str
-    :return: path with filename to the addon.xml.in
+    :param xml_filename: filename of addon.xml to find
+    :type xml_filename: str
+    :return: path with filename to the `xml_filename`
     :rtype: str
     """
-    for filename in walk(working_directory, 'addon.xml.in'):
+    for filename in walk(working_directory, xml_filename):
         print('Found addon.xml.in:', filename)
         return filename
 
     return ''
 
 
-def get_addon_xml(working_directory):
+def get_addon_xml(working_directory, xml_fname=''):
     """
     Get the addon.xml[.in] in the working directory
     :param working_directory: directory to recursively search for the addon.xml[.in]
     :type working_directory: str
+    :param xml_fname: alternative addon.xml filename
+    :type xml_fname: str
     :return: addon.xml information
              {'filename': <filename with path to addon.xml[.in]>,
               'content': <contents of the addon.xml[.in] from read()>,
@@ -302,9 +306,12 @@ def get_addon_xml(working_directory):
     """
     addon_xml = {}
 
-    filename_and_path = os.path.join(working_directory, 'addon.xml')
-    if not os.path.isfile(filename_and_path):
-        filename_and_path = find_addon_xml_in(working_directory)  # binary add-on
+    if xml_fname:
+        filename_and_path = find_addon_xml(working_directory, xml_fname)
+    else:
+        filename_and_path = os.path.join(working_directory, 'addon.xml')
+        if not os.path.isfile(filename_and_path):
+            filename_and_path = find_addon_xml(working_directory)  # binary add-on
 
     if os.path.isfile(filename_and_path):
         with open(filename_and_path, encoding='utf-8') as file_handle:
@@ -332,6 +339,12 @@ def language_code_from_path(language_path):
         r'resource\.language\.(?P<language_code>[a-z]{2,3}(?:_[A-Za-z]{2})?(?:@\S+)?)',
         language_path
     )
+    if not match:
+        match = re.search(
+            r'(?P<language_code>[a-z]{2,3}(?:_[A-Za-z]{2})?(?:@\S+)?).po',
+            language_path
+        )
+
     if match:
         language_code = match.group('language_code')
         if '_' in language_code:
@@ -342,21 +355,28 @@ def language_code_from_path(language_path):
     return language_code
 
 
-def generate_po_index(working_directory):
+def generate_po_index(working_directory, po_path=''):
     """
     Generate and index of all po files in the working directory (recursive)
     :param working_directory: directory to search for po files
     :type working_directory: str
+    :param po_path: path to po files relative to working directory
+    :type po_path: str
     :return: list of po files found in the working directory
              [{'filename': <filename with path to the po file>,
               'language_code': <language code of the po file>,
               'content': <contents of the po file from read()>,
-              'content_lines': <contents of the po file from readlines()>}, ...]
+              'content_lines': <contents of the po file from readlines()>,
+              'default': <is default language bool>}, ...]
     :rtype: list[dict]
     """
     file_index = []
-    for path, _, filenames in list(os.walk(working_directory)):
-        if 'resource.language.' not in path:
+    search_path = working_directory
+    if po_path:
+        search_path = os.path.join(working_directory, po_path)
+
+    for path, _, filenames in list(os.walk(search_path)):
+        if not po_path and 'resource.language.' not in path:
             continue
 
         files = [filename for filename in filenames if filename.endswith('.po')]
@@ -368,12 +388,34 @@ def generate_po_index(working_directory):
                 file_handle.seek(0)
                 content = file_handle.read()
 
+            lang_code = language_code_from_path(path)
+            if not lang_code:
+                lang_code = language_code_from_path(filename_and_path)
+
             file_index.append({
                 'filename': filename_and_path,
-                'language_code': language_code_from_path(path),
+                'language_code': lang_code,
                 'content_lines': content_lines,
-                'content': content
+                'content': content,
+                'default': False
             })
+
+    en_index = -1
+    default_set = False
+    for index, po_file in enumerate(file_index):
+        if po_file['language_code'] in ['en_gb', 'en_GB']:
+            file_index[index]['default'] = True
+            default_set = True
+            break
+        if po_file['language_code'] in ['en']:
+            en_index = index
+            continue
+
+    if not default_set:
+        if en_index >= 0:
+            print('Default PO file fallback found \'en\'')
+            file_index[en_index]['default'] = True
+            file_index[en_index]['language_code'] = 'en_GB'
 
     return file_index
 
@@ -386,8 +428,9 @@ def get_default_po(po_index):
     :return: default po file information from the po index
     :rtype: dict
     """
+
     for po_file in po_index:
-        if po_file['language_code'] in ['en_gb', 'en_GB']:
+        if po_file['default'] is True:
             return po_file
 
     return {}
@@ -504,11 +547,11 @@ def merge_po_lines(summary_lines, description_lines, disclaimer_lines, lifecycle
     """
     payload = {}
 
-    en_gb_summary = next((item[1] for item in summary_lines if item[0] == 'en_GB'), [])
-    en_gb_description = next((item[1] for item in description_lines if item[0] == 'en_GB'), [])
-    en_gb_disclaimer = next((item[1] for item in disclaimer_lines if item[0] == 'en_GB'), [])
+    en_gb_summary = next((item[1] for item in summary_lines if item[2] is True), [])
+    en_gb_description = next((item[1] for item in description_lines if item[2] is True), [])
+    en_gb_disclaimer = next((item[1] for item in disclaimer_lines if item[2] is True), [])
     en_gb_lifecyclestate = \
-        next((item[1] for item in lifecyclestate_lines if item[0] == 'en_GB'), [])
+        next((item[1] for item in lifecyclestate_lines if item[2] is True), [])
 
     languages = list(set(
         [item[0] for item in summary_lines] +
@@ -547,18 +590,27 @@ def get_po_lines(items, ctxt):
     """
     payload = []
 
-    en_gb = next((item for item in items if item[0] == 'en_GB'), None)
+    default_languages = ('en_GB', 'en')
+    default_language = None
+    en_gb = None
 
-    if en_gb:
+    for language in default_languages:
+        en_gb = next((item for item in items if item[0] == language), None)
+        if en_gb:
+            default_language = language
+            break
+
+    if en_gb and default_language:
         for item in items:
             payload.append((
                 item[0],
                 [
                     POTPL_MSGCTXT.format(string=ctxt),
                     POTPL_MSGID.format(string=en_gb[1]),
-                    POTPL_MSGSTR.format(string='' if item[0] == 'en_GB' else item[1]),
+                    POTPL_MSGSTR.format(string='' if item[0] == default_language else item[1]),
                     '\n'
-                ]
+                ],
+                item[0] == default_language
             ))
 
     else:
@@ -726,6 +778,9 @@ def insert_po_lines(po_index, po_lines):
     payload = copy.deepcopy(po_index)
     languages = list(po_lines.keys())
 
+    default_language = next((item.get('language_code', 'en_GB')
+                             for item in payload if item.get('default') is True), None)
+
     for index, po_item in enumerate(po_index):
         insert_index = get_po_insert_index(po_item['content_lines'])
         if insert_index <= 0:
@@ -735,8 +790,8 @@ def insert_po_lines(po_index, po_lines):
         insert_lines = []
         if po_item.get('language_code') in languages:
             insert_lines = po_lines.get(po_item.get('language_code'))
-        elif 'en_GB' in languages:
-            insert_lines = po_lines.get('en_GB')
+        elif default_language in languages:
+            insert_lines = po_lines.get(default_language)
 
         if insert_lines:
             insert_lines = format_po_lines(insert_lines)
@@ -799,7 +854,7 @@ def escape_characters(source, dest='po'):
                 unescape(string)
                     .replace('\n', '[CR]')
             )
-            for lang_code, string in source
+            for lang_code, string, _ in source
         ]
     else:
         return [
@@ -811,7 +866,7 @@ def escape_characters(source, dest='po'):
                     .replace(r'&#10;', '[CR]')
                     .replace(r'&amp;#10;', '[CR]')  # remove in the future; fix issue caused by older versions
             )
-            for lang_code, string in source
+            for lang_code, string, _ in source
         ]
 
 
@@ -830,6 +885,9 @@ def xml_to_po(addon_xml, po_index, priority='xml'):
     if priority not in ['xml', 'po']:
         priority = 'xml'
 
+    default_language = next((item.get('language_code', 'en_GB')
+                             for item in po_index if item.get('default') is True), None)
+
     lifecyclestate_type = get_lifecyclestate_type(addon_xml)
 
     xml_lifecyclestates = []
@@ -840,10 +898,14 @@ def xml_to_po(addon_xml, po_index, priority='xml'):
     xml_disclaimers = get_xml_disclaimers(addon_xml)
     xml_summaries = get_xml_summaries(addon_xml)
 
-    xml_descriptions = [(language_code, body) for _, language_code, body in xml_descriptions]
-    xml_disclaimers = [(language_code, body) for _, language_code, body in xml_disclaimers]
-    xml_summaries = [(language_code, body) for _, language_code, body in xml_summaries]
-    xml_lifecyclestates = [(language_code, body) for _, language_code, body in xml_lifecyclestates]
+    xml_descriptions = [(language_code, body, language_code == default_language)
+                        for _, language_code, body in xml_descriptions]
+    xml_disclaimers = [(language_code, body, language_code == default_language)
+                       for _, language_code, body in xml_disclaimers]
+    xml_summaries = [(language_code, body, language_code == default_language)
+                     for _, language_code, body in xml_summaries]
+    xml_lifecyclestates = [(language_code, body, language_code == default_language)
+                           for _, language_code, body in xml_lifecyclestates]
 
     po_descriptions = get_po_metadata(po_index, CTXT_DESCRIPTION)
     po_disclaimers = get_po_metadata(po_index, CTXT_DISCLAIMER)
@@ -892,6 +954,9 @@ def po_to_xml(addon_xml, po_index):
     print('Syncing po files to addon.xml...')
     lifecyclestate_type = get_lifecyclestate_type(addon_xml)
 
+    default_language = next((item.get('language_code', 'en_GB')
+                             for item in po_index if item.get('default') is True), None)
+
     xml_lifecyclestates = []
     if lifecyclestate_type:
         xml_lifecyclestates = get_xml_lifecyclestates(addon_xml)
@@ -905,10 +970,14 @@ def po_to_xml(addon_xml, po_index):
     xml_whitespace = get_xml_whitespace(addon_xml, xml_descriptions, xml_disclaimers,
                                         xml_summaries, xml_lifecyclestates)
 
-    xml_descriptions = [(language_code, body) for _, language_code, body in xml_descriptions]
-    xml_disclaimers = [(language_code, body) for _, language_code, body in xml_disclaimers]
-    xml_summaries = [(language_code, body) for _, language_code, body in xml_summaries]
-    xml_lifecyclestates = [(language_code, body) for _, language_code, body in xml_lifecyclestates]
+    xml_descriptions = [(language_code, body, language_code == default_language)
+                        for _, language_code, body in xml_descriptions]
+    xml_disclaimers = [(language_code, body, language_code == default_language)
+                       for _, language_code, body in xml_disclaimers]
+    xml_summaries = [(language_code, body, language_code == default_language)
+                     for _, language_code, body in xml_summaries]
+    xml_lifecyclestates = [(language_code, body, language_code == default_language)
+                           for _, language_code, body in xml_lifecyclestates]
 
     po_descriptions = get_po_metadata(po_index, CTXT_DESCRIPTION)
     po_disclaimers = get_po_metadata(po_index, CTXT_DISCLAIMER)
@@ -972,6 +1041,10 @@ def main():
                         help='sync addon.xml values to all po files')
     parser.add_argument('-path', '--path', type=directory_type, nargs='?', default='.',
                         const='.', help='working directory')
+    parser.add_argument('-po-path', '--relative-po-path', type=str, nargs='?', default='',
+                        const='', help='path to po files relative to working directory')
+    parser.add_argument('-xml-fname', '--addon-xml-filename', type=str, nargs='?', default='',
+                        const='', help='alternative filename for addon.xml')
     parser.add_argument('-multi', '--multiple-addons', action='store_true',
                         help='multiple add-ons in the working directory')
     parser.add_argument('-v', '--version', action='store_true',
@@ -991,12 +1064,12 @@ def main():
     for directory in directories:
         print('Running sync-addon-metadata-translations on %s...' % directory)
 
-        _addon_xml = get_addon_xml(directory)
+        _addon_xml = get_addon_xml(directory, args.addon_xml_filename)
         if not _addon_xml:
             print('No addon.xml file found in %s... aborted' % directory)
             continue
 
-        _po_index = generate_po_index(directory)
+        _po_index = generate_po_index(directory, args.relative_po_path)
         if not _po_index:
             print('No po files found in %s... aborted' % directory)
             continue
